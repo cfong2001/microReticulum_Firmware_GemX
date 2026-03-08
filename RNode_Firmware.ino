@@ -267,7 +267,12 @@ void setup() {
           .idle_core_mask = 0,
           .trigger_panic  = true,
       };
-      esp_task_wdt_init(&wdt_config);
+      // In IDF 5.x, the framework initializes TWDT before setup(); reconfigure
+      // it with our timeout rather than calling init() (which would fail with
+      // "TWDT already initialized").  Fall back to init() if not yet started.
+      if (esp_task_wdt_reconfigure(&wdt_config) == ESP_ERR_INVALID_STATE) {
+          esp_task_wdt_init(&wdt_config);
+      }
     #else
       esp_task_wdt_init(WDT_TIMEOUT, true); // enable panic so ESP32 restarts
     #endif
