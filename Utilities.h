@@ -24,8 +24,8 @@
     using namespace Adafruit_LittleFS_Namespace;
     #define EEPROM_FILE "eeprom"
     bool file_exists = false;
-    int written_bytes = 4;
     File file(InternalFS);
+    uint8_t nrf_eeprom_cache[EEPROM_SIZE];
 #endif
 #include <stddef.h>
 
@@ -1439,6 +1439,8 @@ void promisc_disable() {
 		if (InternalFS.exists(EEPROM_FILE)) {
 			if (file.open(EEPROM_FILE, FILE_O_WRITE)) {
                 // File was successfully opened for writing
+                file.seek(0);
+                file.read(nrf_eeprom_cache, EEPROM_SIZE);
                 return true;
             }
             // File exists but couldn't be opeend for writing so reformat filesystem
@@ -1461,8 +1463,8 @@ void promisc_disable() {
 			}
 		}
 		// New file was successfully opeend for writing so initialise with empty content
-		uint8_t empty_content[EEPROM_SIZE] = {0};
-		if (file.write(empty_content, EEPROM_SIZE) < EEPROM_SIZE) {
+		memset(nrf_eeprom_cache, 0, EEPROM_SIZE);
+		if (file.write(nrf_eeprom_cache, EEPROM_SIZE) < EEPROM_SIZE) {
             // Write of content failed so fail
 			return false;
 		}
@@ -1472,11 +1474,10 @@ void promisc_disable() {
     }
 
   uint8_t eeprom_read(uint32_t mapped_addr) {
-      uint8_t byte;
-      void* byte_ptr = &byte;
-      file.seek(mapped_addr);
-      file.read(byte_ptr, 1);
-      return byte;
+      if (mapped_addr < EEPROM_SIZE) {
+          return nrf_eeprom_cache[mapped_addr];
+      }
+      return 0;
   }
 #endif
 
@@ -1551,9 +1552,7 @@ void kiss_dump_config() {
 
 #if !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
 void eeprom_flush() {
-    file.close();
-    file.open(EEPROM_FILE, FILE_O_WRITE);
-    written_bytes = 0;
+    file.flush();
 }
 #endif
 
@@ -1566,31 +1565,15 @@ void eeprom_update(int mapped_addr, uint8_t byte) {
 			EEPROM.commit();
 		}
     #elif !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
-        // todo: clean up this implementation, writing one byte and syncing
-        // each time is really slow, but this is also suboptimal
-        uint8_t read_byte;
-        void* read_byte_ptr = &read_byte;
-        file.seek(mapped_addr);
-        file.read(read_byte_ptr, 1);
-        file.seek(mapped_addr);
-        if (read_byte != byte) {
+        if (mapped_addr < EEPROM_SIZE && nrf_eeprom_cache[mapped_addr] != byte) {
+            nrf_eeprom_cache[mapped_addr] = byte;
+            file.seek(mapped_addr);
             file.write(byte);
-        }
-        written_bytes++;
 
-        if ((mapped_addr - eeprom_addr(0)) == ADDR_INFO_LOCK) {
-			// have to do a flush because we're only writing 1 byte and it syncs after 4
-			eeprom_flush();
-        }
-        else if ((mapped_addr - eeprom_addr(0)) == ADDR_CONF_OK) {
-			// have to do a flush because we're only writing 1 byte and it syncs after 4
-			eeprom_flush();
-        }
-
-        if (written_bytes >= 4) {
-            file.close();
-            file.open(EEPROM_FILE, FILE_O_WRITE);
-            written_bytes = 0;
+            if ((mapped_addr - eeprom_addr(0)) == ADDR_INFO_LOCK ||
+                (mapped_addr - eeprom_addr(0)) == ADDR_CONF_OK) {
+                eeprom_flush();
+            }
         }
 	#endif
 }
