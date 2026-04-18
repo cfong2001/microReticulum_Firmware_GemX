@@ -1620,9 +1620,12 @@ void serial_callback(uint8_t sbyte) {
 
         if (sbyte == 0x00) {
           for (uint8_t i = 0; i<33; i++) {
-            if (i<frame_len && i<32) { eeprom_update(config_addr(ADDR_CONF_SSID+i), cmdbuf[i]); }
-            else                     { eeprom_update(config_addr(ADDR_CONF_SSID+i), 0x00); }
+            if (i<frame_len && i<32) { eeprom_update(config_addr(ADDR_CONF_SSID+i), cmdbuf[i], false); }
+            else                     { eeprom_update(config_addr(ADDR_CONF_SSID+i), 0x00, false); }
           }
+          #if MCU_VARIANT == MCU_ESP32
+            EEPROM.commit();
+          #endif
         }
       #endif
     } else if (command == CMD_WIFI_PSK) {
@@ -1639,9 +1642,12 @@ void serial_callback(uint8_t sbyte) {
 
         if (sbyte == 0x00) {
           for (uint8_t i = 0; i<33; i++) {
-            if (i<frame_len && i<32) { eeprom_update(config_addr(ADDR_CONF_PSK+i), cmdbuf[i]); }
-            else                     { eeprom_update(config_addr(ADDR_CONF_PSK+i), 0x00); }
+            if (i<frame_len && i<32) { eeprom_update(config_addr(ADDR_CONF_PSK+i), cmdbuf[i], false); }
+            else                     { eeprom_update(config_addr(ADDR_CONF_PSK+i), 0x00, false); }
           }
+          #if MCU_VARIANT == MCU_ESP32
+            EEPROM.commit();
+          #endif
         }
       #endif
     } else if (command == CMD_WIFI_IP) {
@@ -1656,7 +1662,12 @@ void serial_callback(uint8_t sbyte) {
           if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
         }
 
-        if (frame_len == 4) { for (uint8_t i = 0; i<4; i++) { eeprom_update(config_addr(ADDR_CONF_IP+i), cmdbuf[i]); } }
+        if (frame_len == 4) {
+          for (uint8_t i = 0; i<4; i++) { eeprom_update(config_addr(ADDR_CONF_IP+i), cmdbuf[i], false); }
+          #if MCU_VARIANT == MCU_ESP32
+            EEPROM.commit();
+          #endif
+        }
       #endif
     } else if (command == CMD_WIFI_NM) {
       #if HAS_WIFI
@@ -1670,7 +1681,12 @@ void serial_callback(uint8_t sbyte) {
           if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
         }
 
-        if (frame_len == 4) { for (uint8_t i = 0; i<4; i++) { eeprom_update(config_addr(ADDR_CONF_NM+i), cmdbuf[i]); } }
+        if (frame_len == 4) {
+          for (uint8_t i = 0; i<4; i++) { eeprom_update(config_addr(ADDR_CONF_NM+i), cmdbuf[i], false); }
+          #if MCU_VARIANT == MCU_ESP32
+            EEPROM.commit();
+          #endif
+        }
       #endif
     } else if (command == CMD_BT_CTRL) {
       #if HAS_BLUETOOTH || HAS_BLE
