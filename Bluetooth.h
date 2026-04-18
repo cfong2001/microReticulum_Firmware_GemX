@@ -506,8 +506,8 @@ char bt_devname[11];
       Bluefruit.autoConnLed(false);
       if (Bluefruit.begin()) {
         uint32_t pin = bt_get_passkey();
-        char pin_char[6];
-        sprintf(pin_char,"%lu", pin);
+        char pin_char[11];
+        snprintf(pin_char, sizeof(pin_char), "%lu", pin);
 
         Bluefruit.setTxPower(8);    // Check bluefruit.h for supported values
         Bluefruit.Security.setIOCaps(true, false, false); // display, yes; yes / no, no; keyboard, no
@@ -596,8 +596,8 @@ char bt_devname[11];
     if (bt_state == BT_STATE_OFF) bt_start();
 
     uint32_t pin = bt_get_passkey();
-    char pin_char[6];
-    sprintf(pin_char,"%lu", pin);
+    char pin_char[11];
+    snprintf(pin_char, sizeof(pin_char), "%lu", pin);
     Bluefruit.Security.setPIN(pin_char);
 
     bt_allow_pairing = true;
