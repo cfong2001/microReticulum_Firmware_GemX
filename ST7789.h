@@ -91,14 +91,12 @@
 #define LED_A_ON HIGH
 #define rtos_free free
 #define rtos_malloc malloc
-//SPIClass SPI1(HSPI);
 #endif
 class ST7789Spi : public OLEDDisplay {
   private:
       uint8_t             _rst;
       uint8_t             _dc;
       uint8_t             _cs;
-      uint8_t             _ledA;
       int             _miso;
       int             _mosi;
       int             _clk;
@@ -116,7 +114,6 @@ class ST7789Spi : public OLEDDisplay {
       this->_mosi=mosi;
       this->_miso=miso;
       this->_clk=clk;
-      //this->_ledA  = _ledA;
       _spiSettings = SPISettings(40000000, MSBFIRST, SPI_MODE0);
       setGeometry(g,width,height);
     }
@@ -126,7 +123,6 @@ class ST7789Spi : public OLEDDisplay {
       this->_buffheight+=displayHeight % 8 ? 1:0;
       pinMode(_cs, OUTPUT);
       pinMode(_dc, OUTPUT);
-      //pinMode(_ledA, OUTPUT);
       if (_cs != (uint8_t) -1) {
         pinMode(_cs, OUTPUT);
       }  
@@ -146,7 +142,6 @@ class ST7789Spi : public OLEDDisplay {
       delay(10);
       digitalWrite(_rst, HIGH);
       _spi->begin ();
-      //digitalWrite(_ledA, LED_A_ON);
       return true;
     }
 
@@ -165,7 +160,6 @@ class ST7789Spi : public OLEDDisplay {
        // and copy buffer[pos] to buffer_back[pos];
        for (y = 0; y < _buffheight; y++) {
          for (x = 0; x < displayWidth; x++) {
-          //Serial.printf("x  %d y %d\r\n",x,y);
           uint16_t pos = x + y * displayWidth;
           if (buffer[pos] != buffer_back[pos]) {
             minBoundY = min(minBoundY, y);
@@ -190,9 +184,7 @@ class ST7789Spi : public OLEDDisplay {
           {
             for(int temp = 0; temp<8;temp++)
             {
-              //setAddrWindow(minBoundX,y*8+temp,maxBoundX-minBoundX+1,1);
               setAddrWindow(minBoundX,y*8+temp,maxBoundX-minBoundX+1,1);
-              //setAddrWindow(y*8+temp,minBoundX,1,maxBoundX-minBoundX+1);
               uint32_t const pixbufcount = maxBoundX-minBoundX+1;
               uint16_t *pixbuf = (uint16_t *)rtos_malloc(2 * pixbufcount);
               for (x = minBoundX; x <= maxBoundX; x++)
@@ -218,8 +210,6 @@ class ST7789Spi : public OLEDDisplay {
           {
             for(int temp = 0; temp<8;temp++)
             {
-              //setAddrWindow(minBoundX,y*8+temp,maxBoundX-minBoundX+1,1);
-              //setAddrWindow(minBoundX,y*8+temp,maxBoundX-minBoundX+1,1);
               setAddrWindow(y*8+temp,0,1,displayWidth);
               uint32_t const pixbufcount = displayWidth;
               uint16_t *pixbuf = (uint16_t *)rtos_malloc(2 * pixbufcount);
@@ -279,17 +269,10 @@ class ST7789Spi : public OLEDDisplay {
   }
   
   void displayOn(void) {
-  //sendCommand(DISPLAYON);
   }
 
   void displayOff(void) {
-  //sendCommand(DISPLAYOFF);
   }
-  
-//#define ST77XX_MADCTL_MY 0x80
-//#define ST77XX_MADCTL_MX 0x40
-//#define ST77XX_MADCTL_MV 0x20
-//#define ST77XX_MADCTL_ML 0x10
   protected:
     // Send all the init commands
     virtual void sendInitCommands()
@@ -331,7 +314,6 @@ class ST7789Spi : public OLEDDisplay {
         sendCommand(ST77XX_INVON); //  10: invert
         delay(10);
 
-        //uint8_t madctl = ST77XX_MADCTL_RGB|ST77XX_MADCTL_MX;
         uint8_t madctl = ST77XX_MADCTL_RGB|ST77XX_MADCTL_MV|ST77XX_MADCTL_MX;
         sendCommand(ST77XX_MADCTL);
         WriteData(madctl);
