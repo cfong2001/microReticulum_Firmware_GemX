@@ -2271,8 +2271,10 @@ void sleep_now() {
         digitalWrite(PIN_T114_TFT_EN, HIGH);
       #elif BOARD_MODEL == BOARD_TECHO
         for (uint8_t i = display_intensity; i > 0; i--) { analogWrite(pin_backlight, i-1); delay(1); }
-        epd_black(true); delay(300); epd_black(true); delay(300); epd_black(false);
-        delay(2000);
+        epd_black(true);
+        epd_black(true);
+        epd_black(false);
+        display.powerOff();
         analogWrite(PIN_VEXT_EN, 0);
         delay(100);
       #endif
