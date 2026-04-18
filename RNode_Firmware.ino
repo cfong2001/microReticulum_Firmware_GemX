@@ -159,6 +159,35 @@ protected:
   }
 };
 
+
+// ---------------------------------------------------------
+// Asynchronous SD Logging Queue (Lock-Free)
+// ---------------------------------------------------------
+#ifdef HAS_SDCARD
+#define SD_LOG_QUEUE_SIZE 16
+
+struct SDLogEvent {
+    const char* filename;
+    String data;
+};
+
+SDLogEvent sd_log_queue[SD_LOG_QUEUE_SIZE];
+volatile uint8_t sd_log_head = 0;
+volatile uint8_t sd_log_tail = 0;
+
+void enqueue_sd_log(const char* filename, const String& data) {
+    uint8_t next_head = (sd_log_head + 1) % SD_LOG_QUEUE_SIZE;
+    if (next_head != sd_log_tail) {
+        sd_log_queue[sd_log_head].filename = filename;
+        sd_log_queue[sd_log_head].data = data;
+        sd_log_head = next_head;
+    } else {
+        // Queue full, dropping log to avoid blocking
+        TRACE("SD Log Queue Full - Dropping Log");
+    }
+}
+#endif // HAS_SDCARD
+
 // CBA logger callback
 void on_log(const char* msg, RNS::LogLevel level) {
   // Using individual Serial.print statements to avoid memory allocation for String
@@ -168,65 +197,40 @@ void on_log(const char* msg, RNS::LogLevel level) {
 	Serial.print("] ");
 	Serial.println(msg);
 	Serial.flush();
-/*
-  String line = RNS::getTimeString() + String(" [") + RNS::getLevelName(level) + "] " + msg + "\n";
-	Serial.print(line);
-	Serial.flush();
-*/
 
 #ifdef HAS_SDCARD
-	File file = SD.open("/logfile.txt", FILE_APPEND);
-	if (file) {
-    file.write((uint8_t*)line.c_str(), line.length());
-    file.close();
-  }
+  String line = RNS::getTimeString() + String(" [") + RNS::getLevelName(level) + "] " + msg + "\n";
+  enqueue_sd_log("/logfile.txt", line);
 #endif  // HAS_SDCARD
 }
-
 // CBA receive packet callback
 void on_receive_packet(const RNS::Bytes& raw, const RNS::Interface& interface) {
 #ifdef HAS_SDCARD
   TRACE("Logging receive packet to SD");
   String line = RNS::getTimeString() + String(" recv: ") + String(raw.toHex().c_str()) + "\n";
-	File file = SD.open("/tracefile.txt", FILE_APPEND);
-	if (file) {
-    file.write((uint8_t*)line.c_str(), line.length());
-    file.close();
-  }
+  enqueue_sd_log("/tracefile.txt", line);
+
 	RNS::Packet packet({RNS::Type::NONE}, raw);
 	if (packet.unpack()) {
-    String line = RNS::getTimeString() + String(" recv: ") + String(packet.dumpString().c_str()) + "\n";
-    File file = SD.open("/tracedetails.txt", FILE_APPEND);
-    if (file) {
-      file.write((uint8_t*)line.c_str(), line.length());
-      file.close();
-    }
+    String details_line = RNS::getTimeString() + String(" recv: ") + String(packet.dumpString().c_str()) + "\n";
+    enqueue_sd_log("/tracedetails.txt", details_line);
 	}
 #endif  // HAS_SDCARD
 }
-
 // CBA transmit packet callback
 void on_transmit_packet(const RNS::Bytes& raw, const RNS::Interface& interface) {
 #ifdef HAS_SDCARD
   TRACE("Logging transmit packet to SD");
   String line = RNS::getTimeString() + String(" send: ") + String(raw.toHex().c_str()) + "\n";
-	File file = SD.open("/tracefile.txt", FILE_APPEND);
-	if (file) {
-    file.write((uint8_t*)line.c_str(), line.length());
-    file.close();
-  }
+  enqueue_sd_log("/tracefile.txt", line);
+
 	RNS::Packet packet({RNS::Type::NONE}, raw);
 	if (packet.unpack()) {
-    String line = RNS::getTimeString() + String(" send: ") + String(packet.dumpString().c_str()) + "\n";
-    File file = SD.open("/tracedetails.txt", FILE_APPEND);
-    if (file) {
-      file.write((uint8_t*)line.c_str(), line.length());
-      file.close();
-    }
+    String details_line = RNS::getTimeString() + String(" send: ") + String(packet.dumpString().c_str()) + "\n";
+    enqueue_sd_log("/tracedetails.txt", details_line);
 	}
 #endif  // HAS_SDCARD
 }
-
 // CBA RNS
 RNS::Reticulum reticulum(RNS::Type::NONE);
 RNS::Interface lora_interface(RNS::Type::NONE);
@@ -267,6 +271,17 @@ int _write(int file, char *ptr, int len) {
     Serial.flush();
     return wrote;
 }
+
+
+// Forward declarations for missing functions to fix compilation
+void serial_interrupt_init();
+void validate_status();
+void update_radio_lock();
+void transmit(uint16_t size);
+void update_airtime();
+void update_modem_status();
+void buffer_serial();
+void serial_poll();
 
 void setup() {
 
@@ -2107,6 +2122,30 @@ void tx_queue_handler() {
 
 void work_while_waiting() { loop(); }
 
+
+#ifdef HAS_SDCARD
+void flush_sd_log_queue() {
+    if (sd_log_head == sd_log_tail) return;
+
+    // Open the file corresponding to the oldest log entry
+    const char* current_file = sd_log_queue[sd_log_tail].filename;
+    File file = SD.open(current_file, FILE_APPEND);
+
+    if (file) {
+        // Write all logs that belong to the same file consecutively
+        while (sd_log_head != sd_log_tail && strcmp(sd_log_queue[sd_log_tail].filename, current_file) == 0) {
+            file.write((uint8_t*)sd_log_queue[sd_log_tail].data.c_str(), sd_log_queue[sd_log_tail].data.length());
+
+            // Advance tail
+            sd_log_tail = (sd_log_tail + 1) % SD_LOG_QUEUE_SIZE;
+        }
+        file.close();
+    } else {
+        // Failed to open file, drop the log entry to avoid endless blocking
+        sd_log_tail = (sd_log_tail + 1) % SD_LOG_QUEUE_SIZE;
+    }
+}
+#endif // HAS_SDCARD
 void loop() {
 
 #ifdef HAS_RNS
@@ -2233,7 +2272,12 @@ void loop() {
       kiss_indicate_error(ERROR_MEMORY_LOW); memory_low = false;
     #endif
   }
+
+#ifdef HAS_SDCARD
+  flush_sd_log_queue();
+#endif
 }
+
 
 void sleep_now() {
   #if HAS_SLEEP == true
