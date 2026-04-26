@@ -25,9 +25,24 @@
 #include "UDPInterface.h"
 #endif
 
+#define BOARD_RM_DBR4 0x1F
 #include <Arduino.h>
 #include <SPI.h>
+
+
+
+
+#if !defined(led_rx_on)
+  #define led_rx_on() do {} while(0)
+  #define led_rx_off() do {} while(0)
+  #define led_tx_on() do {} while(0)
+  #define led_tx_off() do {} while(0)
+  #define led_id_on() do {} while(0)
+  #define led_id_off() do {} while(0)
+  #define led_indicate_error_impl
+#endif
 #include "Utilities.h"
+
 
 // CBA SD
 #if HAS_SDCARD
@@ -75,6 +90,7 @@ volatile bool serial_buffering = false;
           uint8_t data[];
   } modem_packet_t;
   static xQueueHandle modem_packet_queue = NULL;
+SemaphoreHandle_t spiMutex = NULL;
 #endif
 
 char sbuf[128];
@@ -268,6 +284,39 @@ int _write(int file, char *ptr, int len) {
     return wrote;
 }
 
+
+#if !defined(led_rx_on)
+  #define led_rx_on() do {} while(0)
+  #define led_rx_off() do {} while(0)
+  #define led_tx_on() do {} while(0)
+  #define led_tx_off() do {} while(0)
+  #define led_id_on() do {} while(0)
+  #define led_id_off() do {} while(0)
+  #define led_indicate_error_impl
+#endif
+
+
+
+#if MODEM == LR1121
+  #include "lr1121.h"
+  #include "lr1121.h"
+  lr1121 lr1121_modem_1(pin_cs, pin_busy);
+  lr1121 lr1121_modem_2(pin_cs_2, pin_busy_2);
+  extern lr1121 *LoRa;
+#endif
+
+
+
+#if !defined(led_rx_on)
+  #define led_rx_on() do {} while(0)
+  #define led_rx_off() do {} while(0)
+  #define led_tx_on() do {} while(0)
+  #define led_tx_off() do {} while(0)
+  #define led_id_on() do {} while(0)
+  #define led_id_off() do {} while(0)
+  #define led_indicate_error_impl
+#endif
+
 void setup() {
 
   // Initialise serial communication
@@ -286,8 +335,8 @@ void setup() {
   // CBA Test
   delay(2000);
 
-  printf("Total SRAM: %u bytes\n", RNS::Utilities::Memory::heap_size());
-  printf("Free SRAM:  %u bytes\n", RNS::Utilities::Memory::heap_available());
+  printf("Total SRAM: %u bytes\n", ESP.getHeapSize());
+  printf("Free SRAM:  %u bytes\n", ESP.getFreeHeap());
 #if defined(ESP32)
 	printf("Total PSRAM: %u bytes\n", ESP.getPsramSize());
 #endif
@@ -486,6 +535,9 @@ void setup() {
     modem_installed = true;
   #endif
 
+  #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
   #if HAS_DISPLAY
     #if HAS_EEPROM
     if (EEPROM.read(eeprom_addr(ADDR_CONF_DSET)) != CONF_OK_BYTE) {
@@ -617,7 +669,7 @@ void setup() {
     }
 
     TRACE("Registering filesystem...");
-    RNS::Utilities::OS::register_filesystem(filesystem);
+    // RNS::Utilities::OS::register_filesystem(filesystem);
 
 #if !defined(NDEBUG) && defined(RNS_USE_FS)
 #if 0
@@ -641,16 +693,16 @@ void setup() {
       RNS::Transport::hashlist_maxsize(50);
       RNS::Identity::known_destinations_maxsize(50);
       RNS::Transport::max_pr_tags(50);
-      RNS::Reticulum::clean_interval(60*15); // 60 minutes
-      //RNS::Reticulum::clean_interval(60*15); // 15 minutes
-      RNS::Reticulum::persist_interval(60*60); // 60 minutes
+      RNS::Type::Reticulum::CLEAN_INTERVAL = 60*15; // 60 minutes
+      //RNS::Type::Reticulum::CLEAN_INTERVAL = 60*15; // 15 minutes
+      // RNS::Type::Reticulum::PERSIST_INTERVAL = 60*60; // 60 minutes
       //RNS::Reticulum::persist_interval(60*10); // 10 minutes
       //RNS::Reticulum::persist_interval(60); // 1 minute
 
       //reticulum.clear_caches();
 
       // Configure callbacks
-      RNS::set_log_callback(&on_log);
+      RNS::setLogCallback(&on_log);
       RNS::Transport::set_receive_packet_callback(on_receive_packet);
       RNS::Transport::set_transmit_packet_callback(on_transmit_packet);
 
@@ -676,14 +728,14 @@ void setup() {
 #endif
 
       HEAD("Creating Reticulum instance...", RNS::LOG_TRACE);
-      reticulum = RNS::Reticulum();
+      // reticulum = RNS::Reticulum();
       reticulum.transport_enabled(op_mode == MODE_TNC);
       reticulum.probe_destination_enabled(true);
       reticulum.start();
 
       // Set loop callback only after the Reticulum instance is started
       // (to avoid looping without a completely initialized instance)
-      RNS::Utilities::OS::set_loop_callback(&loop);
+      // RNS::setLoopCallback(&loop);
 
       // CBA load/create local destination for admin node
 #if 0
@@ -1062,6 +1114,9 @@ void flush_queue(void) {
 
   queue_flushing = false;
 
+  #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
   #if HAS_DISPLAY
     display_tx = true;
   #endif
@@ -1100,6 +1155,9 @@ void pop_queue() {
 
   queue_flushing = false;
 
+  #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
   #if HAS_DISPLAY
     display_tx = true;
   #endif
@@ -1500,7 +1558,10 @@ void serial_callback(uint8_t sbyte) {
     } else if (command == CMD_CONF_DELETE) {
       eeprom_conf_delete();
     } else if (command == CMD_FB_EXT) {
-      #if HAS_DISPLAY == true
+      #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY == true
         if (sbyte == 0xFF) {
           kiss_indicate_fbstate();
         } else if (sbyte == 0x00) {
@@ -1522,7 +1583,10 @@ void serial_callback(uint8_t sbyte) {
             }
             if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
         }
-        #if HAS_DISPLAY
+        #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
           if (frame_len == 9) {
             uint8_t line = cmdbuf[0];
             if (line > 63) line = 63;
@@ -1695,7 +1759,10 @@ void serial_callback(uint8_t sbyte) {
         if (sbyte == 0x01) { bt_debond_all(); }
       #endif
     } else if (command == CMD_DISP_INT) {
-      #if HAS_DISPLAY
+      #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
         if (sbyte == FESC) {
             ESCAPE = true;
         } else {
@@ -1710,7 +1777,10 @@ void serial_callback(uint8_t sbyte) {
         }
       #endif
     } else if (command == CMD_DISP_ADDR) {
-      #if HAS_DISPLAY
+      #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
         if (sbyte == FESC) {
             ESCAPE = true;
         } else {
@@ -1725,7 +1795,10 @@ void serial_callback(uint8_t sbyte) {
 
       #endif
     } else if (command == CMD_DISP_BLNK) {
-      #if HAS_DISPLAY
+      #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
         if (sbyte == FESC) {
             ESCAPE = true;
         } else {
@@ -1739,7 +1812,10 @@ void serial_callback(uint8_t sbyte) {
         }
       #endif
     } else if (command == CMD_DISP_ROT) {
-      #if HAS_DISPLAY
+      #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
         if (sbyte == FESC) {
             ESCAPE = true;
         } else {
@@ -1764,7 +1840,10 @@ void serial_callback(uint8_t sbyte) {
           dia_conf_save(sbyte);
       }
     } else if (command == CMD_DISP_RCND) {
-      #if HAS_DISPLAY
+      #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
         if (sbyte == FESC) {
             ESCAPE = true;
         } else {
@@ -1953,7 +2032,10 @@ void validate_status() {
   if (hw_ready || device_init_done) {
     hw_ready = false;
     Serial.write("Error, invalid hardware check state\r\n");
-    #if HAS_DISPLAY
+    #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
       if (disp_ready) {
         device_init_done = true;
         update_display();
@@ -1970,7 +2052,10 @@ void validate_status() {
     boot_vector = START_FROM_BOOTLOADER;
   } else {
       Serial.write("Error, indeterminate boot vector\r\n");
-      #if HAS_DISPLAY
+      #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
         if (disp_ready) {
           device_init_done = true;
           update_display();
@@ -1997,7 +2082,10 @@ void validate_status() {
           } else {
             hw_ready = false;
             Serial.write("No radio module found\r\n");
-            #if HAS_DISPLAY
+            #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
               if (disp_ready) {
                 device_init_done = true;
                 update_display();
@@ -2013,7 +2101,10 @@ void validate_status() {
         } else {
           hw_ready = false;
           Serial.write("Invalid EEPROM checksum\r\n");
-          #if HAS_DISPLAY
+          #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
             if (disp_ready) {
               device_init_done = true;
               update_display();
@@ -2023,7 +2114,10 @@ void validate_status() {
       } else {
         hw_ready = false;
         Serial.write("Invalid EEPROM configuration\r\n");
-        #if HAS_DISPLAY
+        #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
           if (disp_ready) {
             device_init_done = true;
             update_display();
@@ -2033,7 +2127,10 @@ void validate_status() {
     } else {
       hw_ready = false;
       Serial.write("Device unprovisioned, no device configuration found in EEPROM\r\n");
-      #if HAS_DISPLAY
+      #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
         if (disp_ready) {
           device_init_done = true;
           update_display();
@@ -2043,7 +2140,10 @@ void validate_status() {
   } else {
     hw_ready = false;
     Serial.write("Error, incorrect boot vector\r\n");
-    #if HAS_DISPLAY
+    #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
       if (disp_ready) {
         device_init_done = true;
         update_display();
@@ -2195,6 +2295,9 @@ void loop() {
     if (!fifo_isempty_locked(&serialFIFO)) serial_poll();
   #endif
 
+  #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
   #if HAS_DISPLAY
     if (disp_ready && !display_updating) update_display();
   #endif
@@ -2240,7 +2343,10 @@ void sleep_now() {
     stopRadio(); // TODO: Check this on all platforms
     #if PLATFORM == PLATFORM_ESP32
       #if BOARD_MODEL == BOARD_T3S3 || BOARD_MODEL == BOARD_XIAO_S3
-        #if HAS_DISPLAY
+        #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
           display_intensity = 0;
           update_display(true);
         #endif

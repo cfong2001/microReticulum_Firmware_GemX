@@ -708,6 +708,55 @@
           const int pin_led_tx = 48;
         #endif
       #endif
+    #elif BOARD_MODEL == BOARD_RM_DBR4
+      #define IS_ESP32 true
+      #define MODEM LR1121
+      #define DIO2_AS_RF_SWITCH true
+      #define HAS_BUSY true
+      #define HAS_TCXO true
+
+      #define HAS_DISPLAY false
+      #define HAS_CONSOLE true
+      #define HAS_WIFI true
+      #define HAS_BLUETOOTH false
+      #define HAS_BLE true
+      #define HAS_NP false
+      #define HAS_SD false
+      #define HAS_EEPROM true
+
+      #define HAS_INPUT false
+      #define HAS_SLEEP false
+
+      // Control Plane / 915MHz LR1121
+      const int pin_cs = 0;
+      const int pin_reset = 2;
+      const int pin_dio = 1;
+      const int pin_busy = 3;
+
+      // Data Plane / 2.4GHz LR1121
+      const int pin_cs_2 = 7;
+      const int pin_reset_2 = 10;
+      const int pin_dio_2 = 18;
+      const int pin_busy_2 = 8;
+
+      // Shared SPI
+      const int pin_miso = 5;
+      const int pin_mosi = 4;
+      const int pin_sclk = 6;
+
+      const int pin_tcxo_enable = -1;
+      const int radio_rfsw_ctrl[] = {15, 0, 4, 8, 8, 14, 0, 13};
+
+      #if HAS_NP == false
+        #if defined(EXTERNAL_LEDS)
+          const int pin_led_rx = -1;
+          const int pin_led_tx = -1;
+        #else
+          const int pin_led_rx = -1;
+          const int pin_led_tx = -1;
+        #endif
+      #endif
+
 
     #else
       #error An unsupported ESP32 board was selected. Cannot compile RNode firmware.
