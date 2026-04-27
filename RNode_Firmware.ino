@@ -881,10 +881,22 @@ void ISR_VECT receive_callback(int packet_size) {
       
       seq = sequence;
 
-      #if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
-        last_rssi = LoRa->packetRssi();
-        last_snr_raw = LoRa->packetSnrRaw();
-      #endif
+
+#if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
+  #if MODEM == LR1121
+    if (lr1121_modem_2.packetSnrRaw() > LoRa->packetSnrRaw() || (lr1121_modem_2.packetSnrRaw() == LoRa->packetSnrRaw() && lr1121_modem_2.packetRssiRaw() > LoRa->packetRssiRaw())) {
+      last_rssi = lr1121_modem_2.packetRssi();
+      last_snr_raw = lr1121_modem_2.packetSnrRaw();
+    } else {
+      last_rssi = LoRa->packetRssi();
+      last_snr_raw = LoRa->packetSnrRaw();
+    }
+  #else
+    last_rssi = LoRa->packetRssi();
+    last_snr_raw = LoRa->packetSnrRaw();
+  #endif
+#endif
+
 
       getPacketData(packet_size);
 
@@ -913,10 +925,22 @@ void ISR_VECT receive_callback(int packet_size) {
       #endif
       seq = sequence;
 
-      #if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
-        last_rssi = LoRa->packetRssi();
-        last_snr_raw = LoRa->packetSnrRaw();
-      #endif
+
+#if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
+  #if MODEM == LR1121
+    if (lr1121_modem_2.packetSnrRaw() > LoRa->packetSnrRaw() || (lr1121_modem_2.packetSnrRaw() == LoRa->packetSnrRaw() && lr1121_modem_2.packetRssiRaw() > LoRa->packetRssiRaw())) {
+      last_rssi = lr1121_modem_2.packetRssi();
+      last_snr_raw = lr1121_modem_2.packetSnrRaw();
+    } else {
+      last_rssi = LoRa->packetRssi();
+      last_snr_raw = LoRa->packetSnrRaw();
+    }
+  #else
+    last_rssi = LoRa->packetRssi();
+    last_snr_raw = LoRa->packetSnrRaw();
+  #endif
+#endif
+
 
       getPacketData(packet_size);
 
@@ -936,10 +960,22 @@ void ISR_VECT receive_callback(int packet_size) {
         seq = SEQ_UNSET;
       }
 
-      #if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
-        last_rssi = LoRa->packetRssi();
-        last_snr_raw = LoRa->packetSnrRaw();
-      #endif
+
+#if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
+  #if MODEM == LR1121
+    if (lr1121_modem_2.packetSnrRaw() > LoRa->packetSnrRaw() || (lr1121_modem_2.packetSnrRaw() == LoRa->packetSnrRaw() && lr1121_modem_2.packetRssiRaw() > LoRa->packetRssiRaw())) {
+      last_rssi = lr1121_modem_2.packetRssi();
+      last_snr_raw = lr1121_modem_2.packetSnrRaw();
+    } else {
+      last_rssi = LoRa->packetRssi();
+      last_snr_raw = LoRa->packetSnrRaw();
+    }
+  #else
+    last_rssi = LoRa->packetRssi();
+    last_snr_raw = LoRa->packetSnrRaw();
+  #endif
+#endif
+
 
       getPacketData(packet_size);
       ready = true;
