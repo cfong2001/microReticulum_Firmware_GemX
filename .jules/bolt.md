@@ -1,0 +1,4 @@
+
+## 2024-05-18 - SPI Block Transfers in LoRa Drivers
+**Learning:** Found a major performance bottleneck where SPI drivers (`sx126x.cpp` and `sx128x.cpp`) were using byte-by-byte loops for multi-byte `SPI.transfer` operations. This incurs huge function-call overhead and wastes hardware capabilities. The optimization is to use `SPI.transfer(buffer, size)` for block transfers, which utilizes DMA/FIFOs on ESP32/ARM. However, Arduino's `SPI.transfer` mutates the input buffer in place.
+**Action:** Always implement safe chunking for non-destructive block writes. When optimizing `const uint8_t*` inputs, allocate a small stack buffer (e.g., `uint8_t temp[32]`) to chunk the block transfer, preventing mutation of the input array and avoiding stack overflow on constrained devices (AVR). For reads, pre-fill the buffer with `memset(buffer, 0, size)` before the `SPI.transfer` block call to mimic original 0x00 clocking behavior.
