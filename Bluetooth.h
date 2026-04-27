@@ -136,7 +136,7 @@ char bt_devname[11];
               data[BT_DEV_ADDR_LEN] = EEPROM.read(eeprom_addr(ADDR_SIGNATURE));
               unsigned char *hash = MD5::make_hash(data, BT_DEV_ADDR_LEN);
               memcpy(bt_dh, hash, BT_DEV_HASH_LEN);
-              sprintf(bt_devname, "RNode %02X%02X", bt_dh[14], bt_dh[15]);
+              snprintf(bt_devname, sizeof(bt_devname), "RNode %02X%02X", (uint8_t)bt_dh[14], (uint8_t)bt_dh[15]);
               free(data);
 
               SerialBT.enableSSP();
@@ -337,7 +337,7 @@ char bt_devname[11];
               data[BT_DEV_ADDR_LEN] = EEPROM.read(eeprom_addr(ADDR_SIGNATURE));
               unsigned char *hash = MD5::make_hash(data, BT_DEV_ADDR_LEN);
               memcpy(bt_dh, hash, BT_DEV_HASH_LEN);
-              sprintf(bt_devname, "RNode %02X%02X", bt_dh[14], bt_dh[15]);
+              snprintf(bt_devname, sizeof(bt_devname), "RNode %02X%02X", (uint8_t)bt_dh[14], (uint8_t)bt_dh[15]);
               free(data);
 
               bt_security_setup();
@@ -506,8 +506,8 @@ char bt_devname[11];
       Bluefruit.autoConnLed(false);
       if (Bluefruit.begin()) {
         uint32_t pin = bt_get_passkey();
-        char pin_char[6];
-        sprintf(pin_char,"%lu", pin);
+        char pin_char[7];
+        snprintf(pin_char, sizeof(pin_char), "%06lu", (unsigned long)pin);
 
         Bluefruit.setTxPower(8);    // Check bluefruit.h for supported values
         Bluefruit.Security.setIOCaps(true, false, false); // display, yes; yes / no, no; keyboard, no
@@ -535,7 +535,7 @@ char bt_devname[11];
         #endif
         unsigned char *hash = MD5::make_hash(data, BT_DEV_ADDR_LEN);
         memcpy(bt_dh, hash, BT_DEV_HASH_LEN);
-        sprintf(bt_devname, "RNode %02X%02X", bt_dh[14], bt_dh[15]);
+        snprintf(bt_devname, sizeof(bt_devname), "RNode %02X%02X", (uint8_t)bt_dh[14], (uint8_t)bt_dh[15]);
         free(data);
 
         bt_ready = true;
@@ -596,8 +596,8 @@ char bt_devname[11];
     if (bt_state == BT_STATE_OFF) bt_start();
 
     uint32_t pin = bt_get_passkey();
-    char pin_char[6];
-    sprintf(pin_char,"%lu", pin);
+    char pin_char[7];
+    snprintf(pin_char, sizeof(pin_char), "%06lu", (unsigned long)pin);
     Bluefruit.Security.setPIN(pin_char);
 
     bt_allow_pairing = true;
