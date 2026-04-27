@@ -32,15 +32,7 @@
 
 
 
-#if !defined(led_rx_on)
-  #define led_rx_on() do {} while(0)
-  #define led_rx_off() do {} while(0)
-  #define led_tx_on() do {} while(0)
-  #define led_tx_off() do {} while(0)
-  #define led_id_on() do {} while(0)
-  #define led_id_off() do {} while(0)
-  #define led_indicate_error_impl
-#endif
+
 #include "Utilities.h"
 
 
@@ -285,15 +277,7 @@ int _write(int file, char *ptr, int len) {
 }
 
 
-#if !defined(led_rx_on)
-  #define led_rx_on() do {} while(0)
-  #define led_rx_off() do {} while(0)
-  #define led_tx_on() do {} while(0)
-  #define led_tx_off() do {} while(0)
-  #define led_id_on() do {} while(0)
-  #define led_id_off() do {} while(0)
-  #define led_indicate_error_impl
-#endif
+
 
 
 
@@ -307,15 +291,7 @@ int _write(int file, char *ptr, int len) {
 
 
 
-#if !defined(led_rx_on)
-  #define led_rx_on() do {} while(0)
-  #define led_rx_off() do {} while(0)
-  #define led_tx_on() do {} while(0)
-  #define led_tx_off() do {} while(0)
-  #define led_id_on() do {} while(0)
-  #define led_id_off() do {} while(0)
-  #define led_indicate_error_impl
-#endif
+
 
 void setup() {
 

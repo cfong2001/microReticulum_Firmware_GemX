@@ -35,7 +35,7 @@
 sx126x *LoRa = &sx126x_modem;
 #elif MODEM == LR1121
 #include "lr1121.h"
-lr1121 *LoRa;
+extern lr1121 *LoRa;
 #elif MODEM == SX1276 || MODEM == SX1278
 
 #include "sx127x.h"

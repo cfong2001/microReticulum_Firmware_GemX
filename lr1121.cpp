@@ -3,7 +3,7 @@
 
 #include "Boards.h"
 
-#if MODEM == LR1121
+#if MODEM == SX1262
 #include "lr1121.h"
 
 #if MCU_VARIANT == MCU_ESP32
@@ -101,11 +101,8 @@ extern SPIClass SPI;
 
 #define MAX_PKT_LENGTH 255
 
-lr1121 *lr1121::instance = NULL;
-
 lr1121::lr1121(int ss, int busy) :
   _spiSettings(16E6, MSBFIRST, SPI_MODE0),
-  _ss(LORA_DEFAULT_SS_PIN), _reset(LORA_DEFAULT_RESET_PIN), _dio0(LORA_DEFAULT_DIO0_PIN), _busy(LORA_DEFAULT_BUSY_PIN), _rxen(LORA_DEFAULT_RXEN_PIN),
   _frequency(0),
   _txp(0),
   _sf(0x07),
@@ -465,7 +462,7 @@ bool lr1121::dcd() {
 
   // TODO: Maybe there's a way of unlatching the RSSI
   // status without re-activating receive mode?
-  if (false_preamble_detected) { (*this).receive(); false_preamble_detected = false; }
+  if (false_preamble_detected) { lr1121_modem.receive(); false_preamble_detected = false; }
   return carrier_detected;
 }
 
@@ -655,7 +652,6 @@ void lr1121::enableTCXO() {
     #elif BOARD_MODEL == BOARD_HELTEC32_V4
       uint8_t buf[4] = {MODE_TCXO_1_8V_6X, 0x00, 0x00, 0xFF};
     #endif
-    uint8_t buf[4] = {0};
     executeOpcode(OP_DIO3_TCXO_CTRL_6X, buf, 4);
   #endif
 }
@@ -824,9 +820,9 @@ void ISR_VECT lr1121::handleDio0Rise() {
 
 void ISR_VECT lr1121::onDio0Rise() {
   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
-    // (*this)._dio0_pending = true;
+    lr1121_modem._dio0_pending = true;
   #else
-    (*this).handleDio0Rise();
+    lr1121_modem.handleDio0Rise();
   #endif
 }
 void lr1121::setSPIFrequency(uint32_t frequency) { _spiSettings = SPISettings(frequency, MSBFIRST, SPI_MODE0); }
@@ -836,70 +832,6 @@ void lr1121::explicitHeaderMode() { _implicitHeaderMode = 0; setPacketParams(_pr
 void lr1121::implicitHeaderMode() { _implicitHeaderMode = 1; setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode); }
 byte lr1121::random() { return readRegister(REG_RANDOM_GEN_6X); }
 
-
+lr1121 *lr1121::instance = NULL;
 
 #endif
-extern SemaphoreHandle_t spiMutex;
-
-void lr1121::WriteCommand(uint16_t opcode, uint8_t *buffer, uint8_t size) {
-    uint8_t outBuf[size + 2];
-    outBuf[0] = (uint8_t)(opcode >> 8);
-    outBuf[1] = (uint8_t)opcode;
-    memcpy(&outBuf[2], buffer, size);
-
-    waitOnBusy();
-    if(spiMutex) xSemaphoreTake(spiMutex, portMAX_DELAY);
-    digitalWrite(_ss, LOW);
-    _spiSettings = SPISettings(8000000, MSBFIRST, SPI_MODE0);
-    SPI.beginTransaction(_spiSettings);
-    for(int i = 0; i < size + 2; i++) {
-        SPI.transfer(outBuf[i]);
-    }
-    SPI.endTransaction();
-    digitalWrite(_ss, HIGH);
-    if(spiMutex) xSemaphoreGive(spiMutex);
-    waitOnBusy();
-}
-
-void lr1121::ReadCommand(uint16_t opcode, uint8_t *buffer, uint8_t size) {
-    uint8_t outBuf[2];
-    outBuf[0] = (uint8_t)(opcode >> 8);
-    outBuf[1] = (uint8_t)opcode;
-
-    waitOnBusy();
-    if(spiMutex) xSemaphoreTake(spiMutex, portMAX_DELAY);
-    digitalWrite(_ss, LOW);
-    _spiSettings = SPISettings(8000000, MSBFIRST, SPI_MODE0);
-    SPI.beginTransaction(_spiSettings);
-    SPI.transfer(outBuf[0]);
-    SPI.transfer(outBuf[1]);
-    SPI.transfer(0x00); // dummy byte
-    for(int i = 0; i < size; i++) {
-        buffer[i] = SPI.transfer(0x00);
-    }
-    SPI.endTransaction();
-    digitalWrite(_ss, HIGH);
-    if(spiMutex) xSemaphoreGive(spiMutex);
-    waitOnBusy();
-}
-
-void lr1121::ConfigModParamsLoRa(uint8_t SF, uint8_t BW, uint8_t CR) {
-    uint8_t buf[4] = { SF, BW, CR, 0x00 };
-    WriteCommand(0x020F, buf, sizeof(buf)); // LR11XX_RADIO_SET_MODULATION_PARAM_OC
-}
-
-void lr1121::SetPaConfig(bool isSubGHz) {
-    uint8_t Pabuf[4];
-    if (isSubGHz) {
-        Pabuf[0] = 0x01; // paSel (LP)
-        Pabuf[1] = 0x01; // regPaSupply (DCDC)
-        Pabuf[2] = 0x04; // dutyCycle
-        Pabuf[3] = 0x00; // hpPaCap
-    } else {
-        Pabuf[0] = 0x02; // paSel (HF)
-        Pabuf[1] = 0x01; // regPaSupply (DCDC)
-        Pabuf[2] = 0x04; // dutyCycle
-        Pabuf[3] = 0x07; // hpPaCap
-    }
-    WriteCommand(0x0215, Pabuf, sizeof(Pabuf)); // LR11XX_RADIO_SET_PA_CFG_OC
-}
