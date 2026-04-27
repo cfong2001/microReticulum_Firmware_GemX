@@ -948,7 +948,7 @@ void draw_disp_area() {
         }
       } else if (bt_state == BT_STATE_PAIRING and bt_ssp_pin != 0) {
         char *pin_str = (char*)malloc(DISP_PIN_SIZE+1);
-        sprintf(pin_str, "%06d", bt_ssp_pin);
+        snprintf(pin_str, DISP_PIN_SIZE+1, "%06lu", (unsigned long)bt_ssp_pin);
 
         disp_area.drawBitmap(0, 37, bm_pairing, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
         for (int i = 0; i < DISP_PIN_SIZE; i++) {
@@ -984,7 +984,7 @@ void draw_disp_area() {
           } else if (disp_page == 2) {
             disp_area.drawBitmap(0, 37, bm_version, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
             char *v_str = (char*)malloc(3+1);
-            sprintf(v_str, "%01d%02d", MAJ_VERS, MIN_VERS);
+            snprintf(v_str, 4, "%01d%02d", MAJ_VERS, MIN_VERS);
             for (int i = 0; i < 3; i++) {
               uint8_t numeric = v_str[i]-48; uint8_t bm_offset = numeric*5;
               uint8_t dxp = 20;
