@@ -25,9 +25,19 @@
 #include "UDPInterface.h"
 #endif
 
+#define BOARD_RM_DBR4 0x1F
 #include <Arduino.h>
 #include <SPI.h>
+
+
+
+
+
+
+
+
 #include "Utilities.h"
+
 
 // CBA SD
 #if HAS_SDCARD
@@ -75,6 +85,7 @@ volatile bool serial_buffering = false;
           uint8_t data[];
   } modem_packet_t;
   static xQueueHandle modem_packet_queue = NULL;
+SemaphoreHandle_t spiMutex = NULL;
 #endif
 
 char sbuf[128];
@@ -268,6 +279,24 @@ int _write(int file, char *ptr, int len) {
     return wrote;
 }
 
+
+
+
+
+
+#if MODEM == LR1121
+  #include "lr1121.h"
+  #include "lr1121.h"
+
+  extern lr1121 *LoRa;
+#endif
+
+
+
+
+
+
+
 void setup() {
 
   // Initialise serial communication
@@ -286,8 +315,8 @@ void setup() {
   // CBA Test
   delay(2000);
 
-  printf("Total SRAM: %u bytes\n", RNS::Utilities::Memory::heap_size());
-  printf("Free SRAM:  %u bytes\n", RNS::Utilities::Memory::heap_available());
+  printf("Total SRAM: %u bytes\n", ESP.getHeapSize());
+  printf("Free SRAM:  %u bytes\n", ESP.getFreeHeap());
 #if defined(ESP32)
 	printf("Total PSRAM: %u bytes\n", ESP.getPsramSize());
 #endif
@@ -455,7 +484,19 @@ void setup() {
 
     // Check installed transceiver chip and
     // probe boot parameters.
+
+#if MODEM == LR1121
+    if (lr1121_modem_1.preInit() && lr1121_modem_2.preInit()) {
+#else
+
+#if MODEM == LR1121
+    if (lr1121_modem_1.preInit() && lr1121_modem_2.preInit()) {
+#else
     if (LoRa->preInit()) {
+#endif
+
+#endif
+
       modem_installed = true;
       
       #if HAS_INPUT
@@ -486,6 +527,9 @@ void setup() {
     modem_installed = true;
   #endif
 
+  #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
   #if HAS_DISPLAY
     #if HAS_EEPROM
     if (EEPROM.read(eeprom_addr(ADDR_CONF_DSET)) != CONF_OK_BYTE) {
@@ -617,7 +661,7 @@ void setup() {
     }
 
     TRACE("Registering filesystem...");
-    RNS::Utilities::OS::register_filesystem(filesystem);
+    // RNS::Utilities::OS::register_filesystem(filesystem);
 
 #if !defined(NDEBUG) && defined(RNS_USE_FS)
 #if 0
@@ -641,16 +685,16 @@ void setup() {
       RNS::Transport::hashlist_maxsize(50);
       RNS::Identity::known_destinations_maxsize(50);
       RNS::Transport::max_pr_tags(50);
-      RNS::Reticulum::clean_interval(60*15); // 60 minutes
-      //RNS::Reticulum::clean_interval(60*15); // 15 minutes
-      RNS::Reticulum::persist_interval(60*60); // 60 minutes
+      RNS::Type::Reticulum::CLEAN_INTERVAL = 60*15; // 60 minutes
+      //RNS::Type::Reticulum::CLEAN_INTERVAL = 60*15; // 15 minutes
+      // RNS::Type::Reticulum::PERSIST_INTERVAL = 60*60; // 60 minutes
       //RNS::Reticulum::persist_interval(60*10); // 10 minutes
       //RNS::Reticulum::persist_interval(60); // 1 minute
 
       //reticulum.clear_caches();
 
       // Configure callbacks
-      RNS::set_log_callback(&on_log);
+      RNS::setLogCallback(&on_log);
       RNS::Transport::set_receive_packet_callback(on_receive_packet);
       RNS::Transport::set_transmit_packet_callback(on_transmit_packet);
 
@@ -676,14 +720,14 @@ void setup() {
 #endif
 
       HEAD("Creating Reticulum instance...", RNS::LOG_TRACE);
-      reticulum = RNS::Reticulum();
+      // reticulum = RNS::Reticulum();
       reticulum.transport_enabled(op_mode == MODE_TNC);
       reticulum.probe_destination_enabled(true);
       reticulum.start();
 
       // Set loop callback only after the Reticulum instance is started
       // (to avoid looping without a completely initialized instance)
-      RNS::Utilities::OS::set_loop_callback(&loop);
+      // RNS::setLoopCallback(&loop);
 
       // CBA load/create local destination for admin node
 #if 0
@@ -837,10 +881,22 @@ void ISR_VECT receive_callback(int packet_size) {
       
       seq = sequence;
 
-      #if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
-        last_rssi = LoRa->packetRssi();
-        last_snr_raw = LoRa->packetSnrRaw();
-      #endif
+
+#if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
+  #if MODEM == LR1121
+    if (lr1121_modem_2.packetSnrRaw() > LoRa->packetSnrRaw() || (lr1121_modem_2.packetSnrRaw() == LoRa->packetSnrRaw() && lr1121_modem_2.packetRssiRaw() > LoRa->packetRssiRaw())) {
+      last_rssi = lr1121_modem_2.packetRssi();
+      last_snr_raw = lr1121_modem_2.packetSnrRaw();
+    } else {
+      last_rssi = LoRa->packetRssi();
+      last_snr_raw = LoRa->packetSnrRaw();
+    }
+  #else
+    last_rssi = LoRa->packetRssi();
+    last_snr_raw = LoRa->packetSnrRaw();
+  #endif
+#endif
+
 
       getPacketData(packet_size);
 
@@ -869,10 +925,22 @@ void ISR_VECT receive_callback(int packet_size) {
       #endif
       seq = sequence;
 
-      #if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
-        last_rssi = LoRa->packetRssi();
-        last_snr_raw = LoRa->packetSnrRaw();
-      #endif
+
+#if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
+  #if MODEM == LR1121
+    if (lr1121_modem_2.packetSnrRaw() > LoRa->packetSnrRaw() || (lr1121_modem_2.packetSnrRaw() == LoRa->packetSnrRaw() && lr1121_modem_2.packetRssiRaw() > LoRa->packetRssiRaw())) {
+      last_rssi = lr1121_modem_2.packetRssi();
+      last_snr_raw = lr1121_modem_2.packetSnrRaw();
+    } else {
+      last_rssi = LoRa->packetRssi();
+      last_snr_raw = LoRa->packetSnrRaw();
+    }
+  #else
+    last_rssi = LoRa->packetRssi();
+    last_snr_raw = LoRa->packetSnrRaw();
+  #endif
+#endif
+
 
       getPacketData(packet_size);
 
@@ -892,10 +960,22 @@ void ISR_VECT receive_callback(int packet_size) {
         seq = SEQ_UNSET;
       }
 
-      #if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
-        last_rssi = LoRa->packetRssi();
-        last_snr_raw = LoRa->packetSnrRaw();
-      #endif
+
+#if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
+  #if MODEM == LR1121
+    if (lr1121_modem_2.packetSnrRaw() > LoRa->packetSnrRaw() || (lr1121_modem_2.packetSnrRaw() == LoRa->packetSnrRaw() && lr1121_modem_2.packetRssiRaw() > LoRa->packetRssiRaw())) {
+      last_rssi = lr1121_modem_2.packetRssi();
+      last_snr_raw = lr1121_modem_2.packetSnrRaw();
+    } else {
+      last_rssi = LoRa->packetRssi();
+      last_snr_raw = LoRa->packetSnrRaw();
+    }
+  #else
+    last_rssi = LoRa->packetRssi();
+    last_snr_raw = LoRa->packetSnrRaw();
+  #endif
+#endif
+
 
       getPacketData(packet_size);
       ready = true;
@@ -960,54 +1040,56 @@ void ISR_VECT receive_callback(int packet_size) {
 }
 
 bool startRadio() {
-  update_radio_lock();
   if (!radio_online && !console_active) {
     if (!radio_locked && hw_ready) {
-      if (!LoRa->begin(lora_freq)) {
-        // The radio could not be started.
-        // Indicate this failure over both the
-        // serial port and with the onboard LEDs
-        radio_error = true;
-        kiss_indicate_error(ERROR_INITRADIO);
-        led_indicate_error(0);
+
+#if MODEM == LR1121
+      if (!lr1121_modem_1.begin(lora_freq)) {
+        ERROR("RNode 915MHz modem initialization failed!");
         return false;
-      } else {
-        radio_online = true;
-
-        init_channel_stats();
-
-        setTXPower();
-        setBandwidth();
-        setSpreadingFactor();
-        setCodingRate();
-        getFrequency();
-
-        LoRa->enableCrc();
-        LoRa->onReceive(receive_callback);
-        lora_receive();
-
-        // Flash an info pattern to indicate
-        // that the radio is now on
-        kiss_indicate_radiostate();
-        led_indicate_info(3);
-        return true;
       }
+      if (!lr1121_modem_2.begin(2400000000)) { // 2.4GHz
+        ERROR("RNode 2.4GHz modem initialization failed!");
+        return false;
+      }
+      lr1121_modem_1.setSyncWord(0x1424);
+      lr1121_modem_2.setSyncWord(0x1424);
 
+      setPreamble();
+      setSpreadingFactor();
+      setCodingRate();
+      setBandwidth();
+      setTXPower();
+
+      lr1121_modem_1.enableCrc();
+      lr1121_modem_2.enableCrc();
+
+      lr1121_modem_1.onReceive(receive_callback);
+      lr1121_modem_2.onReceive(receive_callback);
+#else
+      if (!LoRa->begin(lora_freq)) {
+        ERROR("RNode modem initialization failed!");
+        return false;
+      }
+      LoRa->setSyncWord(0x1424);
+      setPreamble();
+      setSpreadingFactor();
+      setCodingRate();
+      setBandwidth();
+      setTXPower();
+      LoRa->enableCrc();
+      LoRa->onReceive(receive_callback);
+#endif
+
+      radio_online = true;
+      if (op_mode == MODE_TNC) kiss_indicate_stat_rx();
+      return true;
     } else {
-      // Flash a warning pattern to indicate
-      // that the radio was locked, and thus
-      // not started
-      radio_online = false;
-      kiss_indicate_radiostate();
-      led_indicate_warning(3);
+      if (!radio_locked) led_indicate_error(0);
       return false;
     }
-  } else {
-    // If radio is already on, we silently
-    // ignore the request.
-    kiss_indicate_radiostate();
-    return true;
   }
+  return true;
 }
 
 void stopRadio() {
@@ -1062,6 +1144,9 @@ void flush_queue(void) {
 
   queue_flushing = false;
 
+  #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
   #if HAS_DISPLAY
     display_tx = true;
   #endif
@@ -1100,6 +1185,9 @@ void pop_queue() {
 
   queue_flushing = false;
 
+  #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
   #if HAS_DISPLAY
     display_tx = true;
   #endif
@@ -1175,13 +1263,30 @@ void transmit(uint16_t size) {
       if (size > SINGLE_MTU - HEADER_L) { header = header | FLAG_SPLIT; }
 
       LoRa->beginPacket();
-      LoRa->write(header); written++;
+#if MODEM == LR1121
+      lr1121_modem_2.beginPacket();
+#endif
+      LoRa->write(header);
+#if MODEM == LR1121
+      lr1121_modem_2.write(header);
+#endif
+      written++;
 
       for (uint16_t i=0; i < size; i++) {
-        LoRa->write(tbuf[i]); written++;
+        LoRa->write(tbuf[i]);
+#if MODEM == LR1121
+        lr1121_modem_2.write(tbuf[i]);
+#endif
+        written++;
 
         if (written == 255 && isSplitPacket(header)) {
-          if (!LoRa->endPacket()) {
+          bool tx_failed = false;
+          if (!LoRa->endPacket()) tx_failed = true;
+#if MODEM == LR1121
+          if (!lr1121_modem_2.endPacket()) tx_failed = true;
+#endif
+
+          if (tx_failed) {
             kiss_indicate_error(ERROR_MODEM_TIMEOUT);
             kiss_indicate_error(ERROR_TXFAILED);
             led_indicate_error(5);
@@ -1190,12 +1295,24 @@ void transmit(uint16_t size) {
 
           add_airtime(written);
           LoRa->beginPacket();
+#if MODEM == LR1121
+          lr1121_modem_2.beginPacket();
+#endif
           LoRa->write(header);
+#if MODEM == LR1121
+          lr1121_modem_2.write(header);
+#endif
           written = 1;
         }
       }
 
-      if (!LoRa->endPacket()) {
+      bool tx_failed = false;
+      if (!LoRa->endPacket()) tx_failed = true;
+#if MODEM == LR1121
+      if (!lr1121_modem_2.endPacket()) tx_failed = true;
+#endif
+
+      if (tx_failed) {
         kiss_indicate_error(ERROR_MODEM_TIMEOUT);
         kiss_indicate_error(ERROR_TXFAILED);
         led_indicate_error(5);
@@ -1207,10 +1324,29 @@ void transmit(uint16_t size) {
     } else {
       led_tx_on(); uint16_t written = 0;
       if (size > SINGLE_MTU) { size = SINGLE_MTU; }
-      if (!implicit) { LoRa->beginPacket(); }
-      else           { LoRa->beginPacket(size); }
-      for (uint16_t i=0; i < size; i++) { LoRa->write(tbuf[i]); written++; }
-      LoRa->endPacket(); add_airtime(written);
+      if (!implicit) {
+        LoRa->beginPacket();
+#if MODEM == LR1121
+        lr1121_modem_2.beginPacket();
+#endif
+      } else {
+        LoRa->beginPacket(size);
+#if MODEM == LR1121
+        lr1121_modem_2.beginPacket(size);
+#endif
+      }
+      for (uint16_t i=0; i < size; i++) {
+        LoRa->write(tbuf[i]);
+#if MODEM == LR1121
+        lr1121_modem_2.write(tbuf[i]);
+#endif
+        written++;
+      }
+      LoRa->endPacket();
+#if MODEM == LR1121
+      lr1121_modem_2.endPacket();
+#endif
+      add_airtime(written);
     }
 
   } else { kiss_indicate_error(ERROR_TXFAILED); led_indicate_error(5); }
@@ -1500,7 +1636,10 @@ void serial_callback(uint8_t sbyte) {
     } else if (command == CMD_CONF_DELETE) {
       eeprom_conf_delete();
     } else if (command == CMD_FB_EXT) {
-      #if HAS_DISPLAY == true
+      #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY == true
         if (sbyte == 0xFF) {
           kiss_indicate_fbstate();
         } else if (sbyte == 0x00) {
@@ -1522,7 +1661,10 @@ void serial_callback(uint8_t sbyte) {
             }
             if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
         }
-        #if HAS_DISPLAY
+        #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
           if (frame_len == 9) {
             uint8_t line = cmdbuf[0];
             if (line > 63) line = 63;
@@ -1695,7 +1837,10 @@ void serial_callback(uint8_t sbyte) {
         if (sbyte == 0x01) { bt_debond_all(); }
       #endif
     } else if (command == CMD_DISP_INT) {
-      #if HAS_DISPLAY
+      #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
         if (sbyte == FESC) {
             ESCAPE = true;
         } else {
@@ -1710,7 +1855,10 @@ void serial_callback(uint8_t sbyte) {
         }
       #endif
     } else if (command == CMD_DISP_ADDR) {
-      #if HAS_DISPLAY
+      #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
         if (sbyte == FESC) {
             ESCAPE = true;
         } else {
@@ -1725,7 +1873,10 @@ void serial_callback(uint8_t sbyte) {
 
       #endif
     } else if (command == CMD_DISP_BLNK) {
-      #if HAS_DISPLAY
+      #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
         if (sbyte == FESC) {
             ESCAPE = true;
         } else {
@@ -1739,7 +1890,10 @@ void serial_callback(uint8_t sbyte) {
         }
       #endif
     } else if (command == CMD_DISP_ROT) {
-      #if HAS_DISPLAY
+      #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
         if (sbyte == FESC) {
             ESCAPE = true;
         } else {
@@ -1764,7 +1918,10 @@ void serial_callback(uint8_t sbyte) {
           dia_conf_save(sbyte);
       }
     } else if (command == CMD_DISP_RCND) {
-      #if HAS_DISPLAY
+      #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
         if (sbyte == FESC) {
             ESCAPE = true;
         } else {
@@ -1953,7 +2110,10 @@ void validate_status() {
   if (hw_ready || device_init_done) {
     hw_ready = false;
     Serial.write("Error, invalid hardware check state\r\n");
-    #if HAS_DISPLAY
+    #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
       if (disp_ready) {
         device_init_done = true;
         update_display();
@@ -1970,7 +2130,10 @@ void validate_status() {
     boot_vector = START_FROM_BOOTLOADER;
   } else {
       Serial.write("Error, indeterminate boot vector\r\n");
-      #if HAS_DISPLAY
+      #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
         if (disp_ready) {
           device_init_done = true;
           update_display();
@@ -1997,7 +2160,10 @@ void validate_status() {
           } else {
             hw_ready = false;
             Serial.write("No radio module found\r\n");
-            #if HAS_DISPLAY
+            #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
               if (disp_ready) {
                 device_init_done = true;
                 update_display();
@@ -2013,7 +2179,10 @@ void validate_status() {
         } else {
           hw_ready = false;
           Serial.write("Invalid EEPROM checksum\r\n");
-          #if HAS_DISPLAY
+          #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
             if (disp_ready) {
               device_init_done = true;
               update_display();
@@ -2023,7 +2192,10 @@ void validate_status() {
       } else {
         hw_ready = false;
         Serial.write("Invalid EEPROM configuration\r\n");
-        #if HAS_DISPLAY
+        #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
           if (disp_ready) {
             device_init_done = true;
             update_display();
@@ -2033,7 +2205,10 @@ void validate_status() {
     } else {
       hw_ready = false;
       Serial.write("Device unprovisioned, no device configuration found in EEPROM\r\n");
-      #if HAS_DISPLAY
+      #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
         if (disp_ready) {
           device_init_done = true;
           update_display();
@@ -2043,7 +2218,10 @@ void validate_status() {
   } else {
     hw_ready = false;
     Serial.write("Error, incorrect boot vector\r\n");
-    #if HAS_DISPLAY
+    #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
       if (disp_ready) {
         device_init_done = true;
         update_display();
@@ -2195,6 +2373,9 @@ void loop() {
     if (!fifo_isempty_locked(&serialFIFO)) serial_poll();
   #endif
 
+  #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
   #if HAS_DISPLAY
     if (disp_ready && !display_updating) update_display();
   #endif
@@ -2240,7 +2421,10 @@ void sleep_now() {
     stopRadio(); // TODO: Check this on all platforms
     #if PLATFORM == PLATFORM_ESP32
       #if BOARD_MODEL == BOARD_T3S3 || BOARD_MODEL == BOARD_XIAO_S3
-        #if HAS_DISPLAY
+        #if MODEM == LR1121
+    spiMutex = xSemaphoreCreateMutex();
+  #endif
+  #if HAS_DISPLAY
           display_intensity = 0;
           update_display(true);
         #endif
