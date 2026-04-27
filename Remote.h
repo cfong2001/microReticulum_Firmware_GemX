@@ -163,8 +163,10 @@ void wifi_remote_init() {
   WiFi.setHostname(wr_hostname);
 
   wr_ssid[32] = 0x00; wr_psk[32] = 0x00;
-  for (uint8_t i = 0; i < 32; i++) { wr_ssid[i] = EEPROM.read(config_addr(ADDR_CONF_SSID+i)); if (wr_ssid[i] == 0xFF) { wr_ssid[i] = 0x00; } }
-  for (uint8_t i = 0; i < 32; i++) { wr_psk[i]  = EEPROM.read(config_addr(ADDR_CONF_PSK+i));  if (wr_psk[i]  == 0xFF) { wr_psk[i]  = 0x00; } }
+  EEPROM.readBytes(config_addr(ADDR_CONF_SSID), wr_ssid, 32);
+  for (uint8_t i = 0; i < 32; i++) { if (wr_ssid[i] == 0xFF) { wr_ssid[i] = 0x00; } }
+  EEPROM.readBytes(config_addr(ADDR_CONF_PSK), wr_psk, 32);
+  for (uint8_t i = 0; i < 32; i++) { if (wr_psk[i]  == 0xFF) { wr_psk[i]  = 0x00; } }
   wr_channel = EEPROM.read(eeprom_addr(ADDR_CONF_WCHN)); if (wr_channel < 1 || wr_channel > 14) { wr_channel = WR_CHANNEL_DEFAULT; }
   wifi_remote_start();
   wifi_init_ran = true;
