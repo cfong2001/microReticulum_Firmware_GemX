@@ -23,10 +23,12 @@
 
 class lr1121 : public Stream {
 public:
-  static lr1121 *instance;
+  static lr1121 *instances[2];
+  static void onDio0Rise_0();
+  static void onDio0Rise_1();
 
 public:
-  lr1121(int ss, int busy);
+  lr1121(int ss, int busy, int instance_id = 0);
 
   int begin(long frequency);
   void end();
@@ -85,7 +87,7 @@ public:
   void WriteCommand(uint16_t opcode, uint8_t *buffer, uint8_t size);
   void ReadCommand(uint16_t opcode, uint8_t *buffer, uint8_t size);
   void ConfigModParamsLoRa(uint8_t SF, uint8_t BW, uint8_t CR);
-  void SetPaConfig(bool isSubGHz);
+  void SetPaConfig();
   void executeOpcode(uint8_t opcode, uint8_t *buffer, uint8_t size);
   void executeOpcodeRead(uint8_t opcode, uint8_t *buffer, uint8_t size);
   void writeBuffer(const uint8_t* buffer, size_t size);
@@ -116,7 +118,7 @@ private:
   void writeRegister(uint16_t address, uint8_t value);
   uint8_t singleTransfer(uint8_t opcode, uint16_t address, uint8_t value);
 
-  static void onDio0Rise();
+
 
   void handleLowDataRate();
   void optimizeModemSensitivity();
@@ -131,6 +133,8 @@ private:
   int _dio0;
   int _rxen;
   int _busy;
+  int _instance_id;
+  bool _isSubGHz;
   long _frequency;
   int _txp;
   uint8_t _sf;

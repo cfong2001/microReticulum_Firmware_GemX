@@ -33,6 +33,9 @@
 
 
 
+
+
+
 #include "Utilities.h"
 
 
@@ -284,10 +287,11 @@ int _write(int file, char *ptr, int len) {
 #if MODEM == LR1121
   #include "lr1121.h"
   #include "lr1121.h"
-  lr1121 lr1121_modem_1(pin_cs, pin_busy);
-  lr1121 lr1121_modem_2(pin_cs_2, pin_busy_2);
+
   extern lr1121 *LoRa;
 #endif
+
+
 
 
 
@@ -480,7 +484,19 @@ void setup() {
 
     // Check installed transceiver chip and
     // probe boot parameters.
+
+#if MODEM == LR1121
+    if (lr1121_modem_1.preInit() && lr1121_modem_2.preInit()) {
+#else
+
+#if MODEM == LR1121
+    if (lr1121_modem_1.preInit() && lr1121_modem_2.preInit()) {
+#else
     if (LoRa->preInit()) {
+#endif
+
+#endif
+
       modem_installed = true;
       
       #if HAS_INPUT
@@ -988,54 +1004,56 @@ void ISR_VECT receive_callback(int packet_size) {
 }
 
 bool startRadio() {
-  update_radio_lock();
   if (!radio_online && !console_active) {
     if (!radio_locked && hw_ready) {
-      if (!LoRa->begin(lora_freq)) {
-        // The radio could not be started.
-        // Indicate this failure over both the
-        // serial port and with the onboard LEDs
-        radio_error = true;
-        kiss_indicate_error(ERROR_INITRADIO);
-        led_indicate_error(0);
+
+#if MODEM == LR1121
+      if (!lr1121_modem_1.begin(lora_freq)) {
+        ERROR("RNode 915MHz modem initialization failed!");
         return false;
-      } else {
-        radio_online = true;
-
-        init_channel_stats();
-
-        setTXPower();
-        setBandwidth();
-        setSpreadingFactor();
-        setCodingRate();
-        getFrequency();
-
-        LoRa->enableCrc();
-        LoRa->onReceive(receive_callback);
-        lora_receive();
-
-        // Flash an info pattern to indicate
-        // that the radio is now on
-        kiss_indicate_radiostate();
-        led_indicate_info(3);
-        return true;
       }
+      if (!lr1121_modem_2.begin(2400000000)) { // 2.4GHz
+        ERROR("RNode 2.4GHz modem initialization failed!");
+        return false;
+      }
+      lr1121_modem_1.setSyncWord(0x1424);
+      lr1121_modem_2.setSyncWord(0x1424);
 
+      setPreamble();
+      setSpreadingFactor();
+      setCodingRate();
+      setBandwidth();
+      setTXPower();
+
+      lr1121_modem_1.enableCrc();
+      lr1121_modem_2.enableCrc();
+
+      lr1121_modem_1.onReceive(receive_callback);
+      lr1121_modem_2.onReceive(receive_callback);
+#else
+      if (!LoRa->begin(lora_freq)) {
+        ERROR("RNode modem initialization failed!");
+        return false;
+      }
+      LoRa->setSyncWord(0x1424);
+      setPreamble();
+      setSpreadingFactor();
+      setCodingRate();
+      setBandwidth();
+      setTXPower();
+      LoRa->enableCrc();
+      LoRa->onReceive(receive_callback);
+#endif
+
+      radio_online = true;
+      if (op_mode == MODE_TNC) kiss_indicate_stat_rx();
+      return true;
     } else {
-      // Flash a warning pattern to indicate
-      // that the radio was locked, and thus
-      // not started
-      radio_online = false;
-      kiss_indicate_radiostate();
-      led_indicate_warning(3);
+      if (!radio_locked) led_indicate_error(0);
       return false;
     }
-  } else {
-    // If radio is already on, we silently
-    // ignore the request.
-    kiss_indicate_radiostate();
-    return true;
   }
+  return true;
 }
 
 void stopRadio() {

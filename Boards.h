@@ -449,15 +449,23 @@
       const int pin_reset = 12;
       const int pin_dio = 26;
       const int pin_np = 4;
+
       #if HAS_NP == false
         #if defined(EXTERNAL_LEDS)
-          const int pin_led_rx = 2;
-          const int pin_led_tx = 0;
+          const int pin_led_rx = -1;
+          const int pin_led_tx = -1;
         #else
-          const int pin_led_rx = 22;
-          const int pin_led_tx = 22;
+          const int pin_led_rx = -1;
+          const int pin_led_tx = -1;
         #endif
+        #define led_rx_on() do {} while(0)
+        #define led_rx_off() do {} while(0)
+        #define led_tx_on() do {} while(0)
+        #define led_tx_off() do {} while(0)
+        #define led_id_on() do {} while(0)
+        #define led_id_off() do {} while(0)
       #endif
+
 
     #elif BOARD_MODEL == BOARD_RNODE_NG_21
       #define HAS_DISPLAY true
@@ -480,15 +488,23 @@
       const int SD_CLK = 14;
       // CBA already defined by framework
       //const int SD_CS = 13;
+
       #if HAS_NP == false
         #if defined(EXTERNAL_LEDS)
-          const int pin_led_rx = 12;
-          const int pin_led_tx = 4;
+          const int pin_led_rx = -1;
+          const int pin_led_tx = -1;
         #else
-          const int pin_led_rx = 25;
-          const int pin_led_tx = 25;
+          const int pin_led_rx = -1;
+          const int pin_led_tx = -1;
         #endif
+        #define led_rx_on() do {} while(0)
+        #define led_rx_off() do {} while(0)
+        #define led_tx_on() do {} while(0)
+        #define led_tx_off() do {} while(0)
+        #define led_id_on() do {} while(0)
+        #define led_id_off() do {} while(0)
       #endif
+
 
     #elif BOARD_MODEL == BOARD_T3S3
       #define IS_ESP32S3 true
@@ -549,15 +565,23 @@
       const int SD_CLK = 14;
       const int SD_CS = 13;
 
+
       #if HAS_NP == false
         #if defined(EXTERNAL_LEDS)
-          const int pin_led_rx = 37;
-          const int pin_led_tx = 37;
+          const int pin_led_rx = -1;
+          const int pin_led_tx = -1;
         #else
-          const int pin_led_rx = 37;
-          const int pin_led_tx = 37;
+          const int pin_led_rx = -1;
+          const int pin_led_tx = -1;
         #endif
+        #define led_rx_on() do {} while(0)
+        #define led_rx_off() do {} while(0)
+        #define led_tx_on() do {} while(0)
+        #define led_tx_off() do {} while(0)
+        #define led_id_on() do {} while(0)
+        #define led_id_off() do {} while(0)
       #endif
+
 
     #elif BOARD_MODEL == BOARD_TDECK
       #define IS_ESP32S3 true
@@ -605,15 +629,23 @@
       const int DISPLAY_CLK = 40;
       const int DISPLAY_BL_PIN = 42;
 
+
       #if HAS_NP == false
         #if defined(EXTERNAL_LEDS)
-          const int pin_led_rx = 43;
-          const int pin_led_tx = 43;
+          const int pin_led_rx = -1;
+          const int pin_led_tx = -1;
         #else
-          const int pin_led_rx = 43;
-          const int pin_led_tx = 43;
+          const int pin_led_rx = -1;
+          const int pin_led_tx = -1;
         #endif
+        #define led_rx_on() do {} while(0)
+        #define led_rx_off() do {} while(0)
+        #define led_tx_on() do {} while(0)
+        #define led_tx_off() do {} while(0)
+        #define led_id_on() do {} while(0)
+        #define led_id_off() do {} while(0)
       #endif
+
 
     #elif BOARD_MODEL == BOARD_TBEAM_S_V1
       #define IS_ESP32S3 true
@@ -658,15 +690,23 @@
 
       const int IMU_CS = 34;
 
+
       #if HAS_NP == false
         #if defined(EXTERNAL_LEDS)
-          const int pin_led_rx = 43;
-          const int pin_led_tx = 43;
+          const int pin_led_rx = -1;
+          const int pin_led_tx = -1;
         #else
-          const int pin_led_rx = 43;
-          const int pin_led_tx = 43;
+          const int pin_led_rx = -1;
+          const int pin_led_tx = -1;
         #endif
+        #define led_rx_on() do {} while(0)
+        #define led_rx_off() do {} while(0)
+        #define led_tx_on() do {} while(0)
+        #define led_tx_off() do {} while(0)
+        #define led_id_on() do {} while(0)
+        #define led_id_off() do {} while(0)
       #endif
+
 
     #elif BOARD_MODEL == BOARD_XIAO_S3
       #define IS_ESP32S3 true
@@ -699,15 +739,23 @@
       const int pin_dio = 39;
       const int pin_busy = 40;
       
+
       #if HAS_NP == false
         #if defined(EXTERNAL_LEDS)
-          const int pin_led_rx = 48;
-          const int pin_led_tx = 48;
+          const int pin_led_rx = -1;
+          const int pin_led_tx = -1;
         #else
-          const int pin_led_rx = 48;
-          const int pin_led_tx = 48;
+          const int pin_led_rx = -1;
+          const int pin_led_tx = -1;
         #endif
+        #define led_rx_on() do {} while(0)
+        #define led_rx_off() do {} while(0)
+        #define led_tx_on() do {} while(0)
+        #define led_tx_off() do {} while(0)
+        #define led_id_on() do {} while(0)
+        #define led_id_off() do {} while(0)
       #endif
+
     #elif BOARD_MODEL == BOARD_RM_DBR4
       #define IS_ESP32 true
       #define MODEM LR1121
@@ -747,6 +795,7 @@
       const int pin_tcxo_enable = -1;
       const int radio_rfsw_ctrl[] = {15, 0, 4, 8, 8, 14, 0, 13};
 
+
       #if HAS_NP == false
         #if defined(EXTERNAL_LEDS)
           const int pin_led_rx = -1;
@@ -755,7 +804,14 @@
           const int pin_led_rx = -1;
           const int pin_led_tx = -1;
         #endif
+        #define led_rx_on() do {} while(0)
+        #define led_rx_off() do {} while(0)
+        #define led_tx_on() do {} while(0)
+        #define led_tx_off() do {} while(0)
+        #define led_id_on() do {} while(0)
+        #define led_id_off() do {} while(0)
       #endif
+
 
 
     #else
