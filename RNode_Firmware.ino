@@ -1263,13 +1263,30 @@ void transmit(uint16_t size) {
       if (size > SINGLE_MTU - HEADER_L) { header = header | FLAG_SPLIT; }
 
       LoRa->beginPacket();
-      LoRa->write(header); written++;
+#if MODEM == LR1121
+      lr1121_modem_2.beginPacket();
+#endif
+      LoRa->write(header);
+#if MODEM == LR1121
+      lr1121_modem_2.write(header);
+#endif
+      written++;
 
       for (uint16_t i=0; i < size; i++) {
-        LoRa->write(tbuf[i]); written++;
+        LoRa->write(tbuf[i]);
+#if MODEM == LR1121
+        lr1121_modem_2.write(tbuf[i]);
+#endif
+        written++;
 
         if (written == 255 && isSplitPacket(header)) {
-          if (!LoRa->endPacket()) {
+          bool tx_failed = false;
+          if (!LoRa->endPacket()) tx_failed = true;
+#if MODEM == LR1121
+          if (!lr1121_modem_2.endPacket()) tx_failed = true;
+#endif
+
+          if (tx_failed) {
             kiss_indicate_error(ERROR_MODEM_TIMEOUT);
             kiss_indicate_error(ERROR_TXFAILED);
             led_indicate_error(5);
@@ -1278,12 +1295,24 @@ void transmit(uint16_t size) {
 
           add_airtime(written);
           LoRa->beginPacket();
+#if MODEM == LR1121
+          lr1121_modem_2.beginPacket();
+#endif
           LoRa->write(header);
+#if MODEM == LR1121
+          lr1121_modem_2.write(header);
+#endif
           written = 1;
         }
       }
 
-      if (!LoRa->endPacket()) {
+      bool tx_failed = false;
+      if (!LoRa->endPacket()) tx_failed = true;
+#if MODEM == LR1121
+      if (!lr1121_modem_2.endPacket()) tx_failed = true;
+#endif
+
+      if (tx_failed) {
         kiss_indicate_error(ERROR_MODEM_TIMEOUT);
         kiss_indicate_error(ERROR_TXFAILED);
         led_indicate_error(5);
@@ -1295,10 +1324,29 @@ void transmit(uint16_t size) {
     } else {
       led_tx_on(); uint16_t written = 0;
       if (size > SINGLE_MTU) { size = SINGLE_MTU; }
-      if (!implicit) { LoRa->beginPacket(); }
-      else           { LoRa->beginPacket(size); }
-      for (uint16_t i=0; i < size; i++) { LoRa->write(tbuf[i]); written++; }
-      LoRa->endPacket(); add_airtime(written);
+      if (!implicit) {
+        LoRa->beginPacket();
+#if MODEM == LR1121
+        lr1121_modem_2.beginPacket();
+#endif
+      } else {
+        LoRa->beginPacket(size);
+#if MODEM == LR1121
+        lr1121_modem_2.beginPacket(size);
+#endif
+      }
+      for (uint16_t i=0; i < size; i++) {
+        LoRa->write(tbuf[i]);
+#if MODEM == LR1121
+        lr1121_modem_2.write(tbuf[i]);
+#endif
+        written++;
+      }
+      LoRa->endPacket();
+#if MODEM == LR1121
+      lr1121_modem_2.endPacket();
+#endif
+      add_airtime(written);
     }
 
   } else { kiss_indicate_error(ERROR_TXFAILED); led_indicate_error(5); }
