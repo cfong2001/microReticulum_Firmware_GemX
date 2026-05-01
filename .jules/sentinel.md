@@ -1,0 +1,4 @@
+## 2024-05-15 - Buffer Overflows from Sign Extension and Missing Null Terminators
+**Vulnerability:** Several instances of `sprintf` into undersized buffers. Specifically, `char pin_char[6]` for a 6-digit PIN lacks space for the null terminator. Also, formatting `char` types with `%02X` can cause massive buffer overflows (e.g., `bt_devname[11]`) because negative `char` values are sign-extended to 32-bit integers, producing 8-character hex strings instead of 2.
+**Learning:** In C/C++, `sprintf` will happily overwrite adjacent stack/heap memory if variables are larger than expected or if null terminators are forgotten. Sign extension is a silent killer for hex formatting of signed `char`.
+**Prevention:** Always use `snprintf` instead of `sprintf`. Explicitly cast `char` to `uint8_t` when formatting as hex. Ensure `uint32_t` decimal string buffers are at least 11 bytes long, and always account for the null terminator.
