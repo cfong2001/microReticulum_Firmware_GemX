@@ -1937,17 +1937,32 @@ void validate_status() {
       uint8_t F_BOR = BORF;
       uint8_t F_WDR = WDRF;
   #elif MCU_VARIANT == MCU_ESP32
-      // TODO: Get ESP32 boot flags
-      uint8_t boot_flags = 0x02;
-      uint8_t F_POR = 0x00;
-      uint8_t F_BOR = 0x00;
-      uint8_t F_WDR = 0x01;
+      esp_reset_reason_t reason = esp_reset_reason();
+      uint8_t boot_flags = 0x00;
+      uint8_t F_POR = 0;
+      uint8_t F_BOR = 1;
+      uint8_t F_WDR = 2;
+
+      if (reason == ESP_RST_POWERON) {
+        boot_flags = (1 << F_POR);
+      } else if (reason == ESP_RST_BROWNOUT) {
+        boot_flags = (1 << F_BOR);
+      } else {
+        boot_flags = (1 << F_WDR);
+      }
   #elif MCU_VARIANT == MCU_NRF52
-      // TODO: Get NRF52 boot flags
-      uint8_t boot_flags = 0x02;
-      uint8_t F_POR = 0x00;
-      uint8_t F_BOR = 0x00;
-      uint8_t F_WDR = 0x01;
+      uint32_t reason = NRF_POWER->RESETREAS;
+      NRF_POWER->RESETREAS = 0xFFFFFFFF;
+      uint8_t boot_flags = 0x00;
+      uint8_t F_POR = 0;
+      uint8_t F_BOR = 1;
+      uint8_t F_WDR = 2;
+
+      if (reason == 0) {
+        boot_flags = (1 << F_POR);
+      } else {
+        boot_flags = (1 << F_WDR);
+      }
   #endif
 
   if (hw_ready || device_init_done) {
