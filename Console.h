@@ -90,6 +90,12 @@ String console_get_content_type(String filename) {
 
 bool console_serve_file(String path) {
   console_dbg("Request for: "+path);
+
+  if (path.indexOf("..") != -1) {
+    console_dbg("Error: Path traversal attempt detected");
+    return false;
+  }
+
   if (path.endsWith("/")) {
     path += "index.html";
   }
