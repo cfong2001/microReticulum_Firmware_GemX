@@ -90,6 +90,13 @@ String console_get_content_type(String filename) {
 
 bool console_serve_file(String path) {
   console_dbg("Request for: "+path);
+
+  // Prevent directory traversal attacks by rejecting paths containing ".."
+  if (path.indexOf("..") != -1) {
+    console_dbg("Error: Path traversal attempt blocked for: " + path);
+    return false;
+  }
+
   if (path.endsWith("/")) {
     path += "index.html";
   }
