@@ -89,6 +89,9 @@ String console_get_content_type(String filename) {
 }
 
 bool console_serve_file(String path) {
+  // Security: Prevent path traversal vulnerabilities by rejecting paths containing ".."
+  if (path.indexOf("..") != -1) return false;
+
   console_dbg("Request for: "+path);
   if (path.endsWith("/")) {
     path += "index.html";
