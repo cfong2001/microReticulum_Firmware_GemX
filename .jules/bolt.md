@@ -1,0 +1,3 @@
+## 2026-05-07 - Console Build Script Execution Dependencies
+**Learning:** To successfully verify the logic execution of `Console/build.py` via `cd Console && make pages-debug`, the Python `markdown` package must be installed. Furthermore, the script has hardcoded file dependencies (e.g., in `../../dist_archive/` and `./build/r/gfx/`) that cause `FileNotFoundError` exceptions if not present.
+**Action:** When working on the build script again, ensure `markdown` is installed and temporarily mock any missing external dependencies (e.g., using `mkdir -p` and `touch`) to prevent local build failures during verification.
