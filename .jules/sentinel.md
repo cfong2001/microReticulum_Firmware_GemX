@@ -6,3 +6,7 @@
 **Vulnerability:** The embedded ESP32 web server in `Console.h` was serving files directly from the SPIFFS filesystem using the raw `server.uri()` input. This allowed a path traversal attack, meaning an attacker could potentially request `/../../some_sensitive_file` to escape the web root and read arbitrary data.
 **Learning:** Even on embedded devices with minimal filesystems (like SPIFFS/LittleFS), if a web server takes raw URI input and passes it to filesystem open commands, it is vulnerable to directory traversal. The underlying filesystem abstraction does not automatically block `..` escapes.
 **Prevention:** Always manually sanitize URI inputs on embedded web servers. Check for and reject any paths containing `..` (e.g., using `path.indexOf("..") != -1`) before attempting to open the file.
+## 2024-05-15 - Unauthenticated WiFi Access Point (Console.h)
+**Vulnerability:** The `console_start()` function in `Console.h` was spinning up an open, unencrypted WiFi Access Point by calling `WiFi.softAP(bt_devname);` without a password. This allows any unauthenticated attacker to connect to the node and interact with exposed network interfaces or the embedded web server.
+**Learning:** Always provide a password when spinning up softAP modes on embedded devices. A secure PIN/password can be generated dynamically from existing secure data, such as a Bluetooth SSP PIN.
+**Prevention:** Always use `WiFi.softAP(ssid, password)` rather than `WiFi.softAP(ssid)`.
