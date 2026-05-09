@@ -169,7 +169,7 @@ void on_log(const char* msg, RNS::LogLevel level) {
 	Serial.println(msg);
 	Serial.flush();
 /*
-  String line = RNS::getTimeString() + String(" [") + RNS::getLevelName(level) + "] " + msg + "\n";
+  String line = RNS::getTimeString() + " [" + RNS::getLevelName(level) + "] " + msg + "\n";
 	Serial.print(line);
 	Serial.flush();
 */
@@ -187,7 +187,7 @@ void on_log(const char* msg, RNS::LogLevel level) {
 void on_receive_packet(const RNS::Bytes& raw, const RNS::Interface& interface) {
 #ifdef HAS_SDCARD
   TRACE("Logging receive packet to SD");
-  String line = RNS::getTimeString() + String(" recv: ") + String(raw.toHex().c_str()) + "\n";
+  String line = RNS::getTimeString() + " recv: " + raw.toHex().c_str() + "\n";
 	File file = SD.open("/tracefile.txt", FILE_APPEND);
 	if (file) {
     file.write((uint8_t*)line.c_str(), line.length());
@@ -195,7 +195,7 @@ void on_receive_packet(const RNS::Bytes& raw, const RNS::Interface& interface) {
   }
 	RNS::Packet packet({RNS::Type::NONE}, raw);
 	if (packet.unpack()) {
-    String line = RNS::getTimeString() + String(" recv: ") + String(packet.dumpString().c_str()) + "\n";
+    String line = RNS::getTimeString() + " recv: " + packet.dumpString().c_str() + "\n";
     File file = SD.open("/tracedetails.txt", FILE_APPEND);
     if (file) {
       file.write((uint8_t*)line.c_str(), line.length());
@@ -209,7 +209,7 @@ void on_receive_packet(const RNS::Bytes& raw, const RNS::Interface& interface) {
 void on_transmit_packet(const RNS::Bytes& raw, const RNS::Interface& interface) {
 #ifdef HAS_SDCARD
   TRACE("Logging transmit packet to SD");
-  String line = RNS::getTimeString() + String(" send: ") + String(raw.toHex().c_str()) + "\n";
+  String line = RNS::getTimeString() + " send: " + raw.toHex().c_str() + "\n";
 	File file = SD.open("/tracefile.txt", FILE_APPEND);
 	if (file) {
     file.write((uint8_t*)line.c_str(), line.length());
@@ -217,7 +217,7 @@ void on_transmit_packet(const RNS::Bytes& raw, const RNS::Interface& interface) 
   }
 	RNS::Packet packet({RNS::Type::NONE}, raw);
 	if (packet.unpack()) {
-    String line = RNS::getTimeString() + String(" send: ") + String(packet.dumpString().c_str()) + "\n";
+    String line = RNS::getTimeString() + " send: " + packet.dumpString().c_str() + "\n";
     File file = SD.open("/tracedetails.txt", FILE_APPEND);
     if (file) {
       file.write((uint8_t*)line.c_str(), line.length());
