@@ -40,12 +40,12 @@
 
 WebServer server(80);
 
-void console_dbg(String msg) {
+void console_dbg(const String& msg) {
     Serial.print("[Webserver] ");
     Serial.println(msg);
 }
 
-bool exists(String path){
+bool exists(const String& path){
   bool yes = false;
   File file = SPIFFS.open(path, "r");
   if(!file.isDirectory()){
@@ -55,7 +55,7 @@ bool exists(String path){
   return yes;
 }
 
-String console_get_content_type(String filename) {
+const char* console_get_content_type(const String& filename) {
   if (server.hasArg("download")) {
     return "application/octet-stream";
   } else if (filename.endsWith(".htm")) {
@@ -95,7 +95,8 @@ bool console_serve_file(String path) {
     return false;
   }
 
-  console_dbg("Request for: "+path);
+  Serial.print("[Webserver] Request for: ");
+  Serial.println(path.c_str());
   if (path.endsWith("/")) {
     path += "index.html";
   }
@@ -108,7 +109,7 @@ bool console_serve_file(String path) {
   }
 
 
-  String content_type = console_get_content_type(path);
+  const char* content_type = console_get_content_type(path);
   String pathWithGz = path + ".gz";
   if (exists(pathWithGz) || exists(path)) {
     if (exists(pathWithGz)) {
