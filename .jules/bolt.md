@@ -1,0 +1,3 @@
+## 2024-05-10 - Fast SPI Transfer in LoRa Modem
+**Learning:** The `sx126x.cpp` and `sx128x.cpp` libraries implement SPI communication byte-by-byte in loops for `executeOpcode`, `executeOpcodeRead`, `writeBuffer`, and `readBuffer`. This causes a performance bottleneck by missing hardware optimizations and doing redundant overhead per byte.
+**Action:** Optimize these routines to use `SPI.transfer(buffer, size)` for burst mode data transfers, replacing `for` loops with DMA-compatible block transfers using `memcpy` and `memset`, matching the coding conventions memory directive. The PR will fix this performance issue.
