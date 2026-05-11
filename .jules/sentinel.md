@@ -6,3 +6,7 @@
 **Vulnerability:** The embedded ESP32 web server in `Console.h` was serving files directly from the SPIFFS filesystem using the raw `server.uri()` input. This allowed a path traversal attack, meaning an attacker could potentially request `/../../some_sensitive_file` to escape the web root and read arbitrary data.
 **Learning:** Even on embedded devices with minimal filesystems (like SPIFFS/LittleFS), if a web server takes raw URI input and passes it to filesystem open commands, it is vulnerable to directory traversal. The underlying filesystem abstraction does not automatically block `..` escapes.
 **Prevention:** Always manually sanitize URI inputs on embedded web servers. Check for and reject any paths containing `..` (e.g., using `path.indexOf("..") != -1`) before attempting to open the file.
+## 2024-05-15 - Unauthenticated WiFi SoftAP for Embedded Configuration
+**Vulnerability:** `WiFi.softAP(bt_devname)` was called without a password parameter in `console_start()`, creating an open wireless network. This allowed any nearby attacker to connect to the configuration server, potentially modifying device settings or intercepting sensitive data.
+**Learning:** When enabling configuration access points (e.g. ESP32 SoftAP), the default `WiFi.softAP(ssid)` leaves the network open. Explicitly providing a WPA2 pre-shared key is necessary to prevent unauthorized access.
+**Prevention:** Always provide a dynamically generated password (e.g., derived from a pairing PIN or random hash) when instantiating `WiFi.softAP(ssid, password)` to enforce WPA2 encryption.
