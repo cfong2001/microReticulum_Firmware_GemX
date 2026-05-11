@@ -157,7 +157,15 @@ void console_register_pages() {
 void console_start() {
   Serial.println("");
   console_dbg("Starting Access Point...");
-  WiFi.softAP(bt_devname);
+  if (bt_ssp_pin != 0) {
+    char ap_pass[15];
+    snprintf(ap_pass, sizeof(ap_pass), "rnode%06lu", bt_ssp_pin);
+    WiFi.softAP(bt_devname, ap_pass);
+    console_dbg("AP Password set");
+  } else {
+    WiFi.softAP(bt_devname);
+    console_dbg("Warning: AP open, no password set");
+  }
   delay(150);
   IPAddress ip(10, 0, 0, 1);
   IPAddress nm(255, 255, 255, 0);
