@@ -1,0 +1,3 @@
+## 2024-05-19 - Chunked SPI Block Transfers in LoRa Drivers
+**Learning:** In embedded driver files like `sx126x.cpp` and `sx128x.cpp`, single-byte `SPI.transfer` operations within `for` loops cause severe hardware communication bottlenecks because they fail to utilize hardware FIFOs or DMA. However, directly applying `SPI.transfer(buffer, size)` for writes is destructive (it overwrites `buffer` with MISO data).
+**Action:** When optimizing SPI writes, copy data into a small, fixed-size stack buffer (e.g., `uint8_t temp[32]`) in chunks and call `SPI.transfer(temp, chunk_size)` to safely leverage block transfers without corrupting the caller's memory or overflowing the stack. For reads, pre-fill with `memset` before transfer.
