@@ -157,7 +157,9 @@ void console_register_pages() {
 void console_start() {
   Serial.println("");
   console_dbg("Starting Access Point...");
-  WiFi.softAP(bt_devname);
+  char ap_password[16];
+  snprintf(ap_password, sizeof(ap_password), "rnode%06lu", (unsigned long)bt_ssp_pin);
+  WiFi.softAP(bt_devname, ap_password);
   delay(150);
   IPAddress ip(10, 0, 0, 1);
   IPAddress nm(255, 255, 255, 0);
