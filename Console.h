@@ -117,6 +117,9 @@ bool console_serve_file(String path) {
     
     File file = SPIFFS.open(path, "r");
     console_dbg("Serving file to client");
+    // Security Enhancement: Prevent MIME-sniffing and Clickjacking
+    server.sendHeader("X-Content-Type-Options", "nosniff");
+    server.sendHeader("X-Frame-Options", "DENY");
     server.streamFile(file, content_type);
     file.close();
 
@@ -132,6 +135,9 @@ bool console_serve_file(String path) {
       if (exists(remap_path)) {
         File file = SPIFFS.open(remap_path, "r");
         console_dbg("Serving remapped file to client");
+        // Security Enhancement: Prevent MIME-sniffing and Clickjacking
+        server.sendHeader("X-Content-Type-Options", "nosniff");
+        server.sendHeader("X-Frame-Options", "DENY");
         server.streamFile(file, content_type);
         console_dbg("Closing file");
         file.close();
