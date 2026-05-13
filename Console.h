@@ -40,12 +40,14 @@
 
 WebServer server(80);
 
-void console_dbg(String msg) {
+// ⚡ Bolt: Pass String by reference to avoid heap allocations
+void console_dbg(const String& msg) {
     Serial.print("[Webserver] ");
     Serial.println(msg);
 }
 
-bool exists(String path){
+// ⚡ Bolt: Pass String by reference to avoid heap allocations
+bool exists(const String& path){
   bool yes = false;
   File file = SPIFFS.open(path, "r");
   if(!file.isDirectory()){
@@ -55,7 +57,8 @@ bool exists(String path){
   return yes;
 }
 
-String console_get_content_type(String filename) {
+// ⚡ Bolt: Return const char* and pass String by reference to avoid heap allocations
+const char* console_get_content_type(const String& filename) {
   if (server.hasArg("download")) {
     return "application/octet-stream";
   } else if (filename.endsWith(".htm")) {
@@ -108,7 +111,7 @@ bool console_serve_file(String path) {
   }
 
 
-  String content_type = console_get_content_type(path);
+  const char* content_type = console_get_content_type(path);
   String pathWithGz = path + ".gz";
   if (exists(pathWithGz) || exists(path)) {
     if (exists(pathWithGz)) {
