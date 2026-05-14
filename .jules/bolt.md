@@ -1,0 +1,3 @@
+## 2024-05-14 - Optimize SPI Transfers in LoRa Drivers
+**Learning:** In SX126x and SX128x drivers, SPI block transfers (`SPI.transfer(buffer, size)`) are much more efficient than byte-by-byte loops over `SPI.transfer(buffer[i])`, reducing SPI overhead and potentially utilizing DMA. Memory operations (`memcpy`/`memset`) must be checked for positive sizes to avoid unintended side-effects.
+**Action:** Replaced single-byte SPI loops in `sx126x.cpp` and `sx128x.cpp` (`writeBuffer`, `readBuffer`, `executeOpcode`, `executeOpcodeRead`) with chunked block transfers utilizing `memcpy` and `memset` on small stack buffers to preserve memory safety.
