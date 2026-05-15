@@ -65,7 +65,8 @@ char wr_psk[33];
 
 extern void host_disconnected();
 
-void wifi_dbg(String msg) { Serial.print("[WiFi] "); Serial.println(msg); }
+// Bolt: Optimized to pass String by const reference to avoid heap allocations
+void wifi_dbg(const String& msg) { Serial.print("[WiFi] "); Serial.println(msg); }
 
 uint8_t wifi_remote_mode() { return wifi_mode; }
 

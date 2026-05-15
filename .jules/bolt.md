@@ -1,0 +1,3 @@
+## 2024-05-18 - String optimization in ESP32 WebServer
+**Learning:** Optimizing String passing to `const String&` is generally a good performance practice to avoid heap allocation. However, if a function implementation modifies the passed `String` argument via operator overloading (e.g., `path += "index.html"`), the `const` qualifier will cause compilation errors (`discards qualifiers`).
+**Action:** When refactoring to use `const String&`, verify that the parameter is strictly read-only within the function body. If it is mutated, either pass by value (if the copy overhead is acceptable and intended) or create a local copy of the parameter inside the function to mutate.
