@@ -1,0 +1,3 @@
+## 2025-02-18 - Passing Strings by Reference vs Value
+**Learning:** Passing `String` arguments by value in embedded C++ (Arduino/ESP) creates significant memory overhead and fragmentation due to implicit heap allocations for each function call. Using `const String&` instead eliminates these copies while maintaining read-only semantics. Also, returning string literals as `String` allocates memory on return; returning `const char*` avoids this entirely.
+**Action:** When implementing new features or optimizing logging/web-serving paths, always pass `String` arguments by `const String&` and use `const char*` for returning string literals to minimize memory usage and fragmentation.
