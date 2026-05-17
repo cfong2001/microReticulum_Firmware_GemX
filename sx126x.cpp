@@ -5,7 +5,7 @@
 
 #if MODEM == SX1262
 #include "sx126x.h"
-
+#include <string.h>
 #if MCU_VARIANT == MCU_ESP32
   #if MCU_VARIANT == MCU_ESP32 and !defined(CONFIG_IDF_TARGET_ESP32S3)
     #include "soc/rtc_wdt.h"
@@ -205,38 +205,64 @@ void sx126x::waitOnBusy() {
   }
 }
 
+// Performance Optimization: Use chunked block SPI transfer to avoid byte-by-byte overhead and prevent stack overflow
 void sx126x::executeOpcode(uint8_t opcode, uint8_t *buffer, uint8_t size) {
   waitOnBusy();
   digitalWrite(_ss, LOW);
   SPI.beginTransaction(_spiSettings);
   SPI.transfer(opcode);
-  for (int i = 0; i < size; i++) { SPI.transfer(buffer[i]); }
+  if (size > 0) {
+    size_t offset = 0;
+    while (offset < size) {
+      size_t chunk = (size - offset > 32) ? 32 : (size - offset);
+      uint8_t temp[32];
+      memcpy(temp, buffer + offset, chunk);
+      SPI.transfer(temp, chunk);
+      offset += chunk;
+    }
+  }
   SPI.endTransaction();
   digitalWrite(_ss, HIGH);
 }
 
+// Performance Optimization: Pre-fill buffer with zeroes to use block SPI transfer
 void sx126x::executeOpcodeRead(uint8_t opcode, uint8_t *buffer, uint8_t size) {
   waitOnBusy();
   digitalWrite(_ss, LOW);
   SPI.beginTransaction(_spiSettings);
   SPI.transfer(opcode);
   SPI.transfer(0x00);
-  for (int i = 0; i < size; i++) { buffer[i] = SPI.transfer(0x00); }
+  if (size > 0) {
+    memset(buffer, 0, size);
+    SPI.transfer(buffer, size);
+  }
   SPI.endTransaction();
   digitalWrite(_ss, HIGH);
 }
 
+// Performance Optimization: Use chunked block SPI transfer to avoid byte-by-byte overhead and prevent stack overflow
 void sx126x::writeBuffer(const uint8_t* buffer, size_t size) {
   waitOnBusy();
   digitalWrite(_ss, LOW);
   SPI.beginTransaction(_spiSettings);
   SPI.transfer(OP_FIFO_WRITE_6X);
   SPI.transfer(_fifo_tx_addr_ptr);
-  for (int i = 0; i < size; i++) { SPI.transfer(buffer[i]); _fifo_tx_addr_ptr++; }
+  if (size > 0) {
+    size_t offset = 0;
+    while (offset < size) {
+      size_t chunk = (size - offset > 32) ? 32 : (size - offset);
+      uint8_t temp[32];
+      memcpy(temp, buffer + offset, chunk);
+      SPI.transfer(temp, chunk);
+      offset += chunk;
+      _fifo_tx_addr_ptr += chunk;
+    }
+  }
   SPI.endTransaction();
   digitalWrite(_ss, HIGH);
 }
 
+// Performance Optimization: Pre-fill buffer with zeroes to use block SPI transfer
 void sx126x::readBuffer(uint8_t* buffer, size_t size) {
   waitOnBusy();
   digitalWrite(_ss, LOW);
@@ -244,7 +270,10 @@ void sx126x::readBuffer(uint8_t* buffer, size_t size) {
   SPI.transfer(OP_FIFO_READ_6X);
   SPI.transfer(_fifo_rx_addr_ptr);
   SPI.transfer(0x00);
-  for (int i = 0; i < size; i++) { buffer[i] = SPI.transfer(0x00); }
+  if (size > 0) {
+    memset(buffer, 0, size);
+    SPI.transfer(buffer, size);
+  }
   SPI.endTransaction();
   digitalWrite(_ss, HIGH);
 }
