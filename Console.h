@@ -40,12 +40,21 @@
 
 WebServer server(80);
 
-void console_dbg(String msg) {
+// ⚡ Bolt: Using const String& instead of String by value prevents unnecessary
+// heap allocations and memory fragmentation when passing existing String objects.
+void console_dbg(const String& msg) {
+    Serial.print("[Webserver] ");
+    Serial.println(msg);
+}
+// ⚡ Bolt: Adding a const char* overload avoids creating a temporary String object
+// just to pass a string literal to the debug logger.
+void console_dbg(const char* msg) {
     Serial.print("[Webserver] ");
     Serial.println(msg);
 }
 
-bool exists(String path){
+// ⚡ Bolt: Using const String& avoids copying the path string into a new heap allocation.
+bool exists(const String& path){
   bool yes = false;
   File file = SPIFFS.open(path, "r");
   if(!file.isDirectory()){
@@ -55,7 +64,9 @@ bool exists(String path){
   return yes;
 }
 
-String console_get_content_type(String filename) {
+// ⚡ Bolt: Returning a const char* instead of an Arduino String object prevents
+// creating a new heap-allocated object to hold static literal content type strings.
+const char* console_get_content_type(const String& filename) {
   if (server.hasArg("download")) {
     return "application/octet-stream";
   } else if (filename.endsWith(".htm")) {

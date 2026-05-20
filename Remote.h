@@ -65,7 +65,10 @@ char wr_psk[33];
 
 extern void host_disconnected();
 
-void wifi_dbg(String msg) { Serial.print("[WiFi] "); Serial.println(msg); }
+// ⚡ Bolt: Using const String& and const char* overloads instead of passing String by
+// value prevents unnecessary heap memory allocations when logging debug messages.
+void wifi_dbg(const String& msg) { Serial.print("[WiFi] "); Serial.println(msg); }
+void wifi_dbg(const char* msg) { Serial.print("[WiFi] "); Serial.println(msg); }
 
 uint8_t wifi_remote_mode() { return wifi_mode; }
 
