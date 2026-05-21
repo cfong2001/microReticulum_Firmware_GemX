@@ -113,23 +113,11 @@ void device_save_signature() {
 }
 
 void device_load_signature() {
-  for (uint8_t i = 0; i < DEV_SIG_LEN; i++) {
-    #if HAS_EEPROM
-        dev_sig[i] = EEPROM.read(dev_sig_addr(i));
-    #elif MCU_VARIANT == MCU_NRF52
-        dev_sig[i] = eeprom_read(dev_sig_addr(i));
-    #endif
-  }
+  eeprom_read_block(dev_sig_addr(0), dev_sig, DEV_SIG_LEN);
 }
 
 void device_load_firmware_hash() {
-  for (uint8_t i = 0; i < DEV_HASH_LEN; i++) {
-    #if HAS_EEPROM
-        dev_firmware_hash_target[i] = EEPROM.read(dev_fwhash_addr(i));
-    #elif MCU_VARIANT == MCU_NRF52
-        dev_firmware_hash_target[i] = eeprom_read(dev_fwhash_addr(i));
-    #endif
-  }
+  eeprom_read_block(dev_fwhash_addr(0), dev_firmware_hash_target, DEV_HASH_LEN);
 }
 
 void device_save_firmware_hash() {
@@ -217,7 +205,7 @@ bool device_firmware_ok() {
 bool device_init() {
   if (bt_ready) {
     #if MCU_VARIANT == MCU_ESP32
-    for (uint8_t i=0; i<EEPROM_SIG_LEN; i++){dev_eeprom_signature[i]=EEPROM.read(eeprom_addr(ADDR_SIGNATURE+i));}
+    eeprom_read_block(eeprom_addr(ADDR_SIGNATURE), dev_eeprom_signature, EEPROM_SIG_LEN);
     mbedtls_md_context_t ctx;
     mbedtls_md_type_t md_type = MBEDTLS_MD_SHA256;     
     mbedtls_md_init(&ctx);
@@ -233,7 +221,7 @@ bool device_init() {
     mbedtls_md_finish(&ctx, dev_hash);
     mbedtls_md_free(&ctx);
     #elif MCU_VARIANT == MCU_NRF52
-    for (uint8_t i=0; i<EEPROM_SIG_LEN; i++){dev_eeprom_signature[i]=eeprom_read(eeprom_addr(ADDR_SIGNATURE+i));}
+    eeprom_read_block(eeprom_addr(ADDR_SIGNATURE), dev_eeprom_signature, EEPROM_SIG_LEN);
     nRFCrypto.begin();
 
     nRFCrypto_Hash hash;
