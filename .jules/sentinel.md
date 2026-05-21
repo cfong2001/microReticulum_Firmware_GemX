@@ -6,3 +6,7 @@
 **Vulnerability:** The embedded ESP32 web server in `Console.h` was serving files directly from the SPIFFS filesystem using the raw `server.uri()` input. This allowed a path traversal attack, meaning an attacker could potentially request `/../../some_sensitive_file` to escape the web root and read arbitrary data.
 **Learning:** Even on embedded devices with minimal filesystems (like SPIFFS/LittleFS), if a web server takes raw URI input and passes it to filesystem open commands, it is vulnerable to directory traversal. The underlying filesystem abstraction does not automatically block `..` escapes.
 **Prevention:** Always manually sanitize URI inputs on embedded web servers. Check for and reject any paths containing `..` (e.g., using `path.indexOf("..") != -1`) before attempting to open the file.
+## 2024-05-21 - Add HTTP Security Headers in WebServer
+**Vulnerability:** Missing `X-Content-Type-Options` and `X-Frame-Options` on the embedded ESP32 web server (`Console.h`) allowed potential MIME-sniffing and clickjacking attacks.
+**Learning:** For Arduino `WebServer` instances, `server.sendHeader()` must be called strictly before invoking body dispatch methods like `server.streamFile()` or `server.send()`.
+**Prevention:** Always queue HTTP security headers before sending file streams or status code responses on IoT device web servers to enforce secure defaults.
