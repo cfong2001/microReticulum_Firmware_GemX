@@ -1,0 +1,3 @@
+## 2024-05-18 - Optimized SX126x/SX128x SPI Blocking Patterns
+**Learning:** `SPI.transfer(buffer, size)` allows block transfers instead of byte-by-byte loops in SPI transmission. We can avoid loop overhead and enable DMA usage if the platform supports it. Need to include `<string.h>` for memcpy/memset, limit chunks to 32 bytes to ensure it's written sequentially without overflow, wrap in `if (size > 0)`, and use `size_t` for offset variables. For `read`, we must use `memset` first to clear the chunk since we overwrite it in-place using `SPI.transfer(buffer, size)`.
+**Action:** Replace `for (int i = 0; i < size; i++) { SPI.transfer(...) }` with block transfers utilizing `chunk` buffers and `memcpy` / `memset`.
