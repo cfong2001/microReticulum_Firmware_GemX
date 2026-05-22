@@ -19,5 +19,11 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install platformio
+    - name: Patch microReticulum dependency upstream bug
+      run: |
+        pio pkg install -e generic-esp32
+        sed -i 's/_last_memory = memory;/#ifdef RNS_DEBUG_MEMORY\n\t_last_memory = memory;\n\t_last_psram = psram;\n\t_last_flash = flash;\n#endif/g' .pio/libdeps/generic-esp32/microReticulum/src/Transport.cpp
+        sed -i 's/_last_psram = psram;//g' .pio/libdeps/generic-esp32/microReticulum/src/Transport.cpp
+        sed -i 's/_last_flash = flash;//g' .pio/libdeps/generic-esp32/microReticulum/src/Transport.cpp
     - name: Build generic-esp32 environment
       run: pio run -e generic-esp32

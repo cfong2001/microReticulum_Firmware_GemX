@@ -219,8 +219,10 @@
     #define PIN_GPS_RX 34
 
     #if BOARD_MODEL == BOARD_GENERIC_ESP32
+      #undef HAS_BLUETOOTH
       #define HAS_BLUETOOTH true
       #define HAS_CONSOLE true
+      #undef HAS_EEPROM
       #define HAS_EEPROM true
       const int pin_cs = 4;
       const int pin_reset = 33;
