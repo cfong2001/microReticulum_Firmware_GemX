@@ -812,7 +812,7 @@ inline void getPacketData(uint16_t len) {
 
 void ISR_VECT receive_callback(int packet_size) {
   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
-    BaseType_t int_mask;
+    BaseType_t int_mask __attribute__((unused));
   #endif
 
   bool    ready    = false;
