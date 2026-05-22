@@ -2,10 +2,10 @@
 // Licensed under the MIT license.
 
 #include "Boards.h"
-#include <string.h>
 
 #if MODEM == SX1262
 #include "sx126x.h"
+#include <string.h>
 
 #if MCU_VARIANT == MCU_ESP32
   #if MCU_VARIANT == MCU_ESP32 and !defined(CONFIG_IDF_TARGET_ESP32S3)

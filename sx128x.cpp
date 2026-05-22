@@ -2,10 +2,10 @@
 // Licensed under the MIT license.
 
 #include "Boards.h"
-#include <string.h>
 
 #if MODEM == SX1280
 #include "sx128x.h"
+#include <string.h>
 
 #define MCU_1284P 0x91
 #define MCU_2560  0x92
