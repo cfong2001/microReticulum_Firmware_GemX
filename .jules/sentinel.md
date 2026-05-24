@@ -6,3 +6,8 @@
 **Vulnerability:** The embedded ESP32 web server in `Console.h` was serving files directly from the SPIFFS filesystem using the raw `server.uri()` input. This allowed a path traversal attack, meaning an attacker could potentially request `/../../some_sensitive_file` to escape the web root and read arbitrary data.
 **Learning:** Even on embedded devices with minimal filesystems (like SPIFFS/LittleFS), if a web server takes raw URI input and passes it to filesystem open commands, it is vulnerable to directory traversal. The underlying filesystem abstraction does not automatically block `..` escapes.
 **Prevention:** Always manually sanitize URI inputs on embedded web servers. Check for and reject any paths containing `..` (e.g., using `path.indexOf("..") != -1`) before attempting to open the file.
+
+## 2024-05-20 - Add Missing Security Headers in Console WebServer
+**Vulnerability:** The embedded ESP32 web server lacked `X-Content-Type-Options: nosniff` and `X-Frame-Options: DENY` headers, exposing it to potential MIME-sniffing and clickjacking attacks.
+**Learning:** When serving files or responding directly using an embedded ESP32 WebServer, security headers are not applied automatically. They must be queued explicitly.
+**Prevention:** Always queue HTTP security headers like `X-Content-Type-Options: nosniff` and `X-Frame-Options: DENY` using `server.sendHeader()` before calling `server.streamFile()` or `server.send()`.
