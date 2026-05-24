@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 
 #include "Boards.h"
+#include <string.h>
 
 #if MODEM == SX1280
 #include "sx128x.h"
@@ -234,27 +235,42 @@ void sx128x::executeOpcodeRead(uint8_t opcode, uint8_t *buffer, uint8_t size) {
     digitalWrite(_ss, HIGH);
 }
 
+// ⚡ Bolt: Use SPI block transfers instead of byte looping for improved throughput.
+// A temporary 32-byte stack buffer is used to prevent the SPI library
+// from overwriting the const input buffer during the transfer.
 void sx128x::writeBuffer(const uint8_t* buffer, size_t size) {
-    waitOnBusy();
-    digitalWrite(_ss, LOW);
-    SPI.beginTransaction(_spiSettings);
-    SPI.transfer(OP_FIFO_WRITE_8X);
-    SPI.transfer(_fifo_tx_addr_ptr);
-    for (int i = 0; i < size; i++) { SPI.transfer(buffer[i]); _fifo_tx_addr_ptr++; }
-    SPI.endTransaction();
-    digitalWrite(_ss, HIGH);
+  waitOnBusy();
+  digitalWrite(_ss, LOW);
+  SPI.beginTransaction(_spiSettings);
+  SPI.transfer(OP_FIFO_WRITE_8X);
+  SPI.transfer(_fifo_tx_addr_ptr);
+  size_t offset = 0;
+  size_t remaining = size;
+  while (remaining > 0) {
+    uint8_t temp[32];
+    size_t chunk = (remaining > 32) ? 32 : remaining;
+    if (chunk > 0) { memcpy(temp, buffer + offset, chunk); }
+    SPI.transfer(temp, chunk);
+    offset += chunk;
+    remaining -= chunk;
+  }
+  _fifo_tx_addr_ptr += size;
+  SPI.endTransaction();
+  digitalWrite(_ss, HIGH);
 }
 
+// ⚡ Bolt: Use SPI block transfers instead of byte looping for improved throughput.
 void sx128x::readBuffer(uint8_t* buffer, size_t size) {
-    waitOnBusy();
-    digitalWrite(_ss, LOW);
-    SPI.beginTransaction(_spiSettings);
-    SPI.transfer(OP_FIFO_READ_8X);
-    SPI.transfer(_fifo_rx_addr_ptr);
-    SPI.transfer(0x00);
-    for (int i = 0; i < size; i++) { buffer[i] = SPI.transfer(0x00); }
-    SPI.endTransaction();
-    digitalWrite(_ss, HIGH);
+  waitOnBusy();
+  digitalWrite(_ss, LOW);
+  SPI.beginTransaction(_spiSettings);
+  SPI.transfer(OP_FIFO_READ_8X);
+  SPI.transfer(_fifo_rx_addr_ptr);
+  SPI.transfer(0x00);
+  if (size > 0) { memset(buffer, 0, size); }
+  SPI.transfer(buffer, size);
+  SPI.endTransaction();
+  digitalWrite(_ss, HIGH);
 }
 
 void sx128x::setModulationParams(uint8_t sf, uint8_t bw, uint8_t cr) {
