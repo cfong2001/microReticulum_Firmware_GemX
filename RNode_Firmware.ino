@@ -187,19 +187,21 @@ void on_log(const char* msg, RNS::LogLevel level) {
 void on_receive_packet(const RNS::Bytes& raw, const RNS::Interface& interface) {
 #ifdef HAS_SDCARD
   TRACE("Logging receive packet to SD");
-  String line = RNS::getTimeString() + String(" recv: ") + String(raw.toHex().c_str()) + "\n";
 	File file = SD.open("/tracefile.txt", FILE_APPEND);
 	if (file) {
-    file.write((uint8_t*)line.c_str(), line.length());
+    file.print(RNS::getTimeString());
+    file.print(" recv: ");
+    file.println(raw.toHex().c_str());
     file.close();
   }
 	RNS::Packet packet({RNS::Type::NONE}, raw);
 	if (packet.unpack()) {
-    String line = RNS::getTimeString() + String(" recv: ") + String(packet.dumpString().c_str()) + "\n";
-    File file = SD.open("/tracedetails.txt", FILE_APPEND);
-    if (file) {
-      file.write((uint8_t*)line.c_str(), line.length());
-      file.close();
+    File file2 = SD.open("/tracedetails.txt", FILE_APPEND);
+    if (file2) {
+      file2.print(RNS::getTimeString());
+      file2.print(" recv: ");
+      file2.println(packet.dumpString().c_str());
+      file2.close();
     }
 	}
 #endif  // HAS_SDCARD
@@ -209,19 +211,21 @@ void on_receive_packet(const RNS::Bytes& raw, const RNS::Interface& interface) {
 void on_transmit_packet(const RNS::Bytes& raw, const RNS::Interface& interface) {
 #ifdef HAS_SDCARD
   TRACE("Logging transmit packet to SD");
-  String line = RNS::getTimeString() + String(" send: ") + String(raw.toHex().c_str()) + "\n";
 	File file = SD.open("/tracefile.txt", FILE_APPEND);
 	if (file) {
-    file.write((uint8_t*)line.c_str(), line.length());
+    file.print(RNS::getTimeString());
+    file.print(" send: ");
+    file.println(raw.toHex().c_str());
     file.close();
   }
 	RNS::Packet packet({RNS::Type::NONE}, raw);
 	if (packet.unpack()) {
-    String line = RNS::getTimeString() + String(" send: ") + String(packet.dumpString().c_str()) + "\n";
-    File file = SD.open("/tracedetails.txt", FILE_APPEND);
-    if (file) {
-      file.write((uint8_t*)line.c_str(), line.length());
-      file.close();
+    File file2 = SD.open("/tracedetails.txt", FILE_APPEND);
+    if (file2) {
+      file2.print(RNS::getTimeString());
+      file2.print(" send: ");
+      file2.println(packet.dumpString().c_str());
+      file2.close();
     }
 	}
 #endif  // HAS_SDCARD

@@ -40,12 +40,12 @@
 
 WebServer server(80);
 
-void console_dbg(String msg) {
+void console_dbg(const String& msg) {
     Serial.print("[Webserver] ");
     Serial.println(msg);
 }
 
-bool exists(String path){
+bool exists(const String& path){
   bool yes = false;
   File file = SPIFFS.open(path, "r");
   if(!file.isDirectory()){
@@ -55,7 +55,7 @@ bool exists(String path){
   return yes;
 }
 
-String console_get_content_type(String filename) {
+String console_get_content_type(const String& filename) {
   if (server.hasArg("download")) {
     return "application/octet-stream";
   } else if (filename.endsWith(".htm")) {
