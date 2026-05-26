@@ -1,0 +1,3 @@
+## 2025-05-26 - Optimized LoRa SPI Block Transfers
+**Learning:** By default, SPI single-byte iteration (`SPI.transfer(buffer[i])`) is incredibly slow on constrained hardware due to loop overhead and the lack of DMA utilization. Using block transfers (`SPI.transfer(buffer, size)`) speeds up communication, but standard block transfers destructively overwrite the source buffer with received data.
+**Action:** When implementing block SPI transfers for LoRa drivers (SX126x/SX128x), always use chunked transfers with a temporary stack array (e.g., `uint8_t temp[32]`) for writes to keep the source buffer intact without causing stack overflows. For reads, pre-fill the destination buffer with zeros using `memset` before transfer to mimic sending zeros while receiving.
