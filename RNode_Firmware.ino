@@ -114,7 +114,7 @@ protected:
       ERRORF("LoRaInterface::handle_incoming: %s", e.what());
     }
   }
-	virtual void send_outgoing(const RNS::Bytes& data) {
+	virtual bool send_outgoing(const RNS::Bytes& data) {
     // CBA NOTE header will be addded later by transmit function
     TRACEF("LoRaInterface.send_outgoing: (%u bytes) data: %s", data.size(), data.toHex().c_str());
     try {
