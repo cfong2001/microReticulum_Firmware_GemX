@@ -41,7 +41,7 @@ protected:
       ERRORF("UDPInterface::handle_incoming: %s", e.what());
     }
   }
-	virtual void send_outgoing(const RNS::Bytes& data) {
+	virtual bool send_outgoing(const RNS::Bytes& data) {
     try {
       //if (udp.availableForWrite()) {
       //wl_status_t wifi_status = WiFi.status();
@@ -55,12 +55,15 @@ protected:
       }
       // Perform post-send housekeeping
       InterfaceImpl::handle_outgoing(data);
+      return true;
     }
     catch (const std::bad_alloc&) {
       ERROR("UDPInterface::send_outgoing: bad_alloc - out of memory");
+      return false;
     }
     catch (std::exception& e) {
       ERRORF("UDPInterface::send_outgoing: %s", e.what());
+      return false;
     }
   }
 };
