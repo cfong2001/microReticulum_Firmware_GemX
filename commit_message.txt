@@ -1,0 +1,11 @@
+Add HTTP security headers to Console web server and fix CI build error
+
+Adds `X-Content-Type-Options: nosniff` and `X-Frame-Options: DENY` headers to
+all responses served by the ESP32 web server in `Console.h`. This prevents
+browsers from performing MIME-type sniffing (mitigating some XSS risks) and
+prevents the administrative interface from being embedded in iframes
+(mitigating clickjacking attacks).
+
+Additionally, this commit updates `LoRaInterface::send_outgoing` in
+`RNode_Firmware.ino` to return `bool` instead of `void` to fix a CI compilation
+error caused by an upstream change in the `microReticulum` interface.
