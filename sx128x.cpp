@@ -1,6 +1,7 @@
 // Copyright Sandeep Mistry, Mark Qvist and Jacob Eva.
 // Licensed under the MIT license.
 
+#include <string.h>
 #include "Boards.h"
 
 #if MODEM == SX1280
@@ -218,7 +219,11 @@ void sx128x::executeOpcode(uint8_t opcode, uint8_t *buffer, uint8_t size) {
     digitalWrite(_ss, LOW);
     SPI.beginTransaction(_spiSettings);
     SPI.transfer(opcode);
-    for (int i = 0; i < size; i++) { SPI.transfer(buffer[i]); }
+    if (size > 0) {
+        uint8_t temp[size];
+        memcpy(temp, buffer, size);
+        SPI.transfer(temp, size);
+    }
     SPI.endTransaction();
     digitalWrite(_ss, HIGH);
 }
@@ -229,7 +234,10 @@ void sx128x::executeOpcodeRead(uint8_t opcode, uint8_t *buffer, uint8_t size) {
     SPI.beginTransaction(_spiSettings);
     SPI.transfer(opcode);
     SPI.transfer(0x00);
-    for (int i = 0; i < size; i++) { buffer[i] = SPI.transfer(0x00); }
+    if (size > 0) {
+        memset(buffer, 0, size);
+        SPI.transfer(buffer, size);
+    }
     SPI.endTransaction();
     digitalWrite(_ss, HIGH);
 }
@@ -240,7 +248,12 @@ void sx128x::writeBuffer(const uint8_t* buffer, size_t size) {
     SPI.beginTransaction(_spiSettings);
     SPI.transfer(OP_FIFO_WRITE_8X);
     SPI.transfer(_fifo_tx_addr_ptr);
-    for (int i = 0; i < size; i++) { SPI.transfer(buffer[i]); _fifo_tx_addr_ptr++; }
+    if (size > 0) {
+        uint8_t temp[size];
+        memcpy(temp, buffer, size);
+        SPI.transfer(temp, size);
+    }
+    _fifo_tx_addr_ptr += size;
     SPI.endTransaction();
     digitalWrite(_ss, HIGH);
 }
@@ -252,7 +265,10 @@ void sx128x::readBuffer(uint8_t* buffer, size_t size) {
     SPI.transfer(OP_FIFO_READ_8X);
     SPI.transfer(_fifo_rx_addr_ptr);
     SPI.transfer(0x00);
-    for (int i = 0; i < size; i++) { buffer[i] = SPI.transfer(0x00); }
+    if (size > 0) {
+        memset(buffer, 0, size);
+        SPI.transfer(buffer, size);
+    }
     SPI.endTransaction();
     digitalWrite(_ss, HIGH);
 }
