@@ -1,0 +1,3 @@
+## 2024-05-18 - SPI Transfer Optimization
+**Learning:** In highly active SX126x/SX128x drivers, byte-wise `SPI.transfer()` loops incur huge per-byte function call overhead. Using block `SPI.transfer(buffer, size)` triggers hardware DMA support (on ESP32) but destroys the input buffer because it writes MISO responses back to the original array.
+**Action:** For writing payloads via SPI, safely copy blocks of data to a small fixed-size stack buffer (e.g. `uint8_t temp[32]`) and pass the temp buffer to `SPI.transfer(temp, size)`. For reads, use `memset(buffer, 0, size)` before doing a block `SPI.transfer(buffer, size)`. Avoid overflowing the `offset` tracking variable by using `size_t` rather than `uint8_t`.
