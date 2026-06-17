@@ -115,19 +115,22 @@ def list_topic(topic):
     return topic_entries
 
 def render_topic(topic_entries):
-    md = ""
+    # Performance Optimization:
+    # Use a list to accumulate string fragments instead of repeated string concatenation (+=).
+    # This avoids O(N^2) memory reallocation overhead when building large HTML strings.
+    md_parts = []
     for topic in topic_entries:
-        md += "<a class=\"topic_link\" href=\""+str(topic["file"])+"\">"
-        md += "<span class=\"topic\">"
-        md += "<img class=\"topic_image\" src=\""+str(topic["image"])+"\"/>"
-        md += "<span class=\"topic_title\">"+str(topic["title"])+"</span>"
-        #md += "<span class=\"topic_date\">"+str(topic["date"])+"</span>"
-        md += "<span class=\"topic_excerpt\">"+str(topic["excerpt"])+"</span>"
-        md += "</span>"
-        md += "</a>"
+        md_parts.append("<a class=\"topic_link\" href=\""+str(topic["file"])+"\">")
+        md_parts.append("<span class=\"topic\">")
+        md_parts.append("<img class=\"topic_image\" src=\""+str(topic["image"])+"\"/>")
+        md_parts.append("<span class=\"topic_title\">"+str(topic["title"])+"</span>")
+        #md_parts.append("<span class=\"topic_date\">"+str(topic["date"])+"</span>")
+        md_parts.append("<span class=\"topic_excerpt\">"+str(topic["excerpt"])+"</span>")
+        md_parts.append("</span>")
+        md_parts.append("</a>")
 
 
-    return md
+    return "".join(md_parts)
 
 def generate_html(f, root_path):
     md = f.read().decode(INPUT_ENCODING)
