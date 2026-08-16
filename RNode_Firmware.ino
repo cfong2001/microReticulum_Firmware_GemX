@@ -168,16 +168,18 @@ void on_log(const char* msg, RNS::LogLevel level) {
 	Serial.print("] ");
 	Serial.println(msg);
 	Serial.flush();
-/*
-  String line = RNS::getTimeString() + String(" [") + RNS::getLevelName(level) + "] " + msg + "\n";
-	Serial.print(line);
-	Serial.flush();
-*/
 
 #ifdef HAS_SDCARD
 	File file = SD.open("/logfile.txt", FILE_APPEND);
 	if (file) {
-    file.write((uint8_t*)line.c_str(), line.length());
+    String ts = RNS::getTimeString();
+    const char* ln = RNS::getLevelName(level);
+    file.write((uint8_t*)ts.c_str(), ts.length());
+    file.write((uint8_t*)" [", 2);
+    file.write((uint8_t*)ln, strlen(ln));
+    file.write((uint8_t*)"] ", 2);
+    file.write((uint8_t*)msg, strlen(msg));
+    file.write((uint8_t*)"\n", 1);
     file.close();
   }
 #endif  // HAS_SDCARD
@@ -187,18 +189,26 @@ void on_log(const char* msg, RNS::LogLevel level) {
 void on_receive_packet(const RNS::Bytes& raw, const RNS::Interface& interface) {
 #ifdef HAS_SDCARD
   TRACE("Logging receive packet to SD");
-  String line = RNS::getTimeString() + String(" recv: ") + String(raw.toHex().c_str()) + "\n";
 	File file = SD.open("/tracefile.txt", FILE_APPEND);
 	if (file) {
-    file.write((uint8_t*)line.c_str(), line.length());
+    String ts = RNS::getTimeString();
+    String hex = raw.toHex().c_str();
+    file.write((uint8_t*)ts.c_str(), ts.length());
+    file.write((uint8_t*)" recv: ", 7);
+    file.write((uint8_t*)hex.c_str(), hex.length());
+    file.write((uint8_t*)"\n", 1);
     file.close();
   }
 	RNS::Packet packet({RNS::Type::NONE}, raw);
 	if (packet.unpack()) {
-    String line = RNS::getTimeString() + String(" recv: ") + String(packet.dumpString().c_str()) + "\n";
     File file = SD.open("/tracedetails.txt", FILE_APPEND);
     if (file) {
-      file.write((uint8_t*)line.c_str(), line.length());
+      String ts = RNS::getTimeString();
+      String details = packet.dumpString().c_str();
+      file.write((uint8_t*)ts.c_str(), ts.length());
+      file.write((uint8_t*)" recv: ", 7);
+      file.write((uint8_t*)details.c_str(), details.length());
+      file.write((uint8_t*)"\n", 1);
       file.close();
     }
 	}
@@ -209,18 +219,26 @@ void on_receive_packet(const RNS::Bytes& raw, const RNS::Interface& interface) {
 void on_transmit_packet(const RNS::Bytes& raw, const RNS::Interface& interface) {
 #ifdef HAS_SDCARD
   TRACE("Logging transmit packet to SD");
-  String line = RNS::getTimeString() + String(" send: ") + String(raw.toHex().c_str()) + "\n";
 	File file = SD.open("/tracefile.txt", FILE_APPEND);
 	if (file) {
-    file.write((uint8_t*)line.c_str(), line.length());
+    String ts = RNS::getTimeString();
+    String hex = raw.toHex().c_str();
+    file.write((uint8_t*)ts.c_str(), ts.length());
+    file.write((uint8_t*)" send: ", 7);
+    file.write((uint8_t*)hex.c_str(), hex.length());
+    file.write((uint8_t*)"\n", 1);
     file.close();
   }
 	RNS::Packet packet({RNS::Type::NONE}, raw);
 	if (packet.unpack()) {
-    String line = RNS::getTimeString() + String(" send: ") + String(packet.dumpString().c_str()) + "\n";
     File file = SD.open("/tracedetails.txt", FILE_APPEND);
     if (file) {
-      file.write((uint8_t*)line.c_str(), line.length());
+      String ts = RNS::getTimeString();
+      String details = packet.dumpString().c_str();
+      file.write((uint8_t*)ts.c_str(), ts.length());
+      file.write((uint8_t*)" send: ", 7);
+      file.write((uint8_t*)details.c_str(), details.length());
+      file.write((uint8_t*)"\n", 1);
       file.close();
     }
 	}
