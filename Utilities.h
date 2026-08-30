@@ -103,7 +103,7 @@ uint8_t boot_vector = 0x00;
 	    __asm__ __volatile__ ("sts %0, r2\n" : "=m" (OPTIBOOT_MCUSR) :);
 	}
 #elif MCU_VARIANT == MCU_ESP32
-	// TODO: Get ESP32 boot flags
+	#include <esp_system.h>
 #elif MCU_VARIANT == MCU_NRF52
 	// TODO: Get NRF52 boot flags
 #endif

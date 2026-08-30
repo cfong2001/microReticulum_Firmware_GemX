@@ -1937,11 +1937,21 @@ void validate_status() {
       uint8_t F_BOR = BORF;
       uint8_t F_WDR = WDRF;
   #elif MCU_VARIANT == MCU_ESP32
-      // TODO: Get ESP32 boot flags
-      uint8_t boot_flags = 0x02;
+      uint8_t boot_flags = 0x00;
       uint8_t F_POR = 0x00;
-      uint8_t F_BOR = 0x00;
-      uint8_t F_WDR = 0x01;
+      uint8_t F_BOR = 0x01;
+      uint8_t F_WDR = 0x02;
+
+      esp_reset_reason_t reason = esp_reset_reason();
+      if (reason == ESP_RST_POWERON) {
+        boot_flags |= (1 << F_POR);
+      } else if (reason == ESP_RST_BROWNOUT) {
+        boot_flags |= (1 << F_BOR);
+      } else if (reason == ESP_RST_WDT || reason == ESP_RST_INT_WDT || reason == ESP_RST_TASK_WDT || reason == ESP_RST_SW) {
+        boot_flags |= (1 << F_WDR);
+      } else {
+        boot_flags |= (1 << F_POR);
+      }
   #elif MCU_VARIANT == MCU_NRF52
       // TODO: Get NRF52 boot flags
       uint8_t boot_flags = 0x02;
