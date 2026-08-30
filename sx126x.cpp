@@ -5,6 +5,7 @@
 
 #if MODEM == SX1262
 #include "sx126x.h"
+#include <string.h>
 
 #if MCU_VARIANT == MCU_ESP32
   #if MCU_VARIANT == MCU_ESP32 and !defined(CONFIG_IDF_TARGET_ESP32S3)
@@ -210,7 +211,16 @@ void sx126x::executeOpcode(uint8_t opcode, uint8_t *buffer, uint8_t size) {
   digitalWrite(_ss, LOW);
   SPI.beginTransaction(_spiSettings);
   SPI.transfer(opcode);
-  for (int i = 0; i < size; i++) { SPI.transfer(buffer[i]); }
+  if (size > 0) {
+    size_t offset = 0;
+    while (offset < size) {
+      uint8_t temp[32];
+      size_t chunk_size = size - offset > 32 ? 32 : size - offset;
+      memcpy(temp, buffer + offset, chunk_size);
+      SPI.transfer(temp, chunk_size);
+      offset += chunk_size;
+    }
+  }
   SPI.endTransaction();
   digitalWrite(_ss, HIGH);
 }
@@ -221,7 +231,10 @@ void sx126x::executeOpcodeRead(uint8_t opcode, uint8_t *buffer, uint8_t size) {
   SPI.beginTransaction(_spiSettings);
   SPI.transfer(opcode);
   SPI.transfer(0x00);
-  for (int i = 0; i < size; i++) { buffer[i] = SPI.transfer(0x00); }
+  if (size > 0) {
+    memset(buffer, 0, size);
+    SPI.transfer(buffer, size);
+  }
   SPI.endTransaction();
   digitalWrite(_ss, HIGH);
 }
@@ -232,7 +245,17 @@ void sx126x::writeBuffer(const uint8_t* buffer, size_t size) {
   SPI.beginTransaction(_spiSettings);
   SPI.transfer(OP_FIFO_WRITE_6X);
   SPI.transfer(_fifo_tx_addr_ptr);
-  for (int i = 0; i < size; i++) { SPI.transfer(buffer[i]); _fifo_tx_addr_ptr++; }
+  if (size > 0) {
+    size_t offset = 0;
+    while (offset < size) {
+      uint8_t temp[32];
+      size_t chunk_size = size - offset > 32 ? 32 : size - offset;
+      memcpy(temp, buffer + offset, chunk_size);
+      SPI.transfer(temp, chunk_size);
+      offset += chunk_size;
+    }
+    _fifo_tx_addr_ptr += size;
+  }
   SPI.endTransaction();
   digitalWrite(_ss, HIGH);
 }
@@ -244,7 +267,10 @@ void sx126x::readBuffer(uint8_t* buffer, size_t size) {
   SPI.transfer(OP_FIFO_READ_6X);
   SPI.transfer(_fifo_rx_addr_ptr);
   SPI.transfer(0x00);
-  for (int i = 0; i < size; i++) { buffer[i] = SPI.transfer(0x00); }
+  if (size > 0) {
+    memset(buffer, 0, size);
+    SPI.transfer(buffer, size);
+  }
   SPI.endTransaction();
   digitalWrite(_ss, HIGH);
 }
