@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 
 #include "Boards.h"
+#include <string.h>
 
 #if MODEM == SX1262
 #include "sx126x.h"
@@ -210,7 +211,17 @@ void sx126x::executeOpcode(uint8_t opcode, uint8_t *buffer, uint8_t size) {
   digitalWrite(_ss, LOW);
   SPI.beginTransaction(_spiSettings);
   SPI.transfer(opcode);
-  for (int i = 0; i < size; i++) { SPI.transfer(buffer[i]); }
+  // ⚡ Bolt: Replaced byte-by-byte loop with chunked block SPI transfer to significantly reduce function-call overhead and enable potential hardware optimizations (FIFOs/DMA) without mutating the input buffer.
+  if (size > 0) {
+    uint8_t temp[32];
+    size_t offset = 0;
+    while (offset < size) {
+      size_t chunk = (size - offset > sizeof(temp)) ? sizeof(temp) : size - offset;
+      memcpy(temp, buffer + offset, chunk);
+      SPI.transfer(temp, chunk);
+      offset += chunk;
+    }
+  }
   SPI.endTransaction();
   digitalWrite(_ss, HIGH);
 }
@@ -221,7 +232,11 @@ void sx126x::executeOpcodeRead(uint8_t opcode, uint8_t *buffer, uint8_t size) {
   SPI.beginTransaction(_spiSettings);
   SPI.transfer(opcode);
   SPI.transfer(0x00);
-  for (int i = 0; i < size; i++) { buffer[i] = SPI.transfer(0x00); }
+  // ⚡ Bolt: Replaced byte-by-byte read loop with block SPI transfer for improved latency.
+  if (size > 0) {
+    memset(buffer, 0, size);
+    SPI.transfer(buffer, size);
+  }
   SPI.endTransaction();
   digitalWrite(_ss, HIGH);
 }
@@ -232,7 +247,18 @@ void sx126x::writeBuffer(const uint8_t* buffer, size_t size) {
   SPI.beginTransaction(_spiSettings);
   SPI.transfer(OP_FIFO_WRITE_6X);
   SPI.transfer(_fifo_tx_addr_ptr);
-  for (int i = 0; i < size; i++) { SPI.transfer(buffer[i]); _fifo_tx_addr_ptr++; }
+  // ⚡ Bolt: Replaced byte-by-byte loop with chunked block SPI transfer to significantly reduce function-call overhead and enable potential hardware optimizations (FIFOs/DMA) without mutating the input buffer.
+  if (size > 0) {
+    uint8_t temp[32];
+    size_t offset = 0;
+    while (offset < size) {
+      size_t chunk = (size - offset > sizeof(temp)) ? sizeof(temp) : size - offset;
+      memcpy(temp, buffer + offset, chunk);
+      SPI.transfer(temp, chunk);
+      offset += chunk;
+    }
+    _fifo_tx_addr_ptr += size;
+  }
   SPI.endTransaction();
   digitalWrite(_ss, HIGH);
 }
@@ -244,7 +270,11 @@ void sx126x::readBuffer(uint8_t* buffer, size_t size) {
   SPI.transfer(OP_FIFO_READ_6X);
   SPI.transfer(_fifo_rx_addr_ptr);
   SPI.transfer(0x00);
-  for (int i = 0; i < size; i++) { buffer[i] = SPI.transfer(0x00); }
+  // ⚡ Bolt: Replaced byte-by-byte read loop with block SPI transfer for improved latency.
+  if (size > 0) {
+    memset(buffer, 0, size);
+    SPI.transfer(buffer, size);
+  }
   SPI.endTransaction();
   digitalWrite(_ss, HIGH);
 }
