@@ -46,6 +46,7 @@ sx128x *LoRa = &sx128x_modem;
 
 #if !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
 uint8_t eeprom_read(uint32_t mapped_addr);
+void eeprom_read_block(uint32_t mapped_addr, uint8_t* buf, size_t size);
 #endif
 
 #if HAS_DISPLAY == true
@@ -1478,6 +1479,13 @@ void promisc_disable() {
       file.read(byte_ptr, 1);
       return byte;
   }
+
+  void eeprom_read_block(uint32_t mapped_addr, uint8_t* buf, size_t size) {
+      if (size > 0) {
+          file.seek(mapped_addr);
+          file.read(buf, size);
+      }
+  }
 #endif
 
 bool eeprom_info_locked() {
@@ -1721,14 +1729,14 @@ bool eeprom_hwrev_valid() {
 
 bool eeprom_checksum_valid() {
 	char *data = (char*)malloc(CHECKSUMMED_SIZE);
+    #if HAS_EEPROM
 	for (uint8_t  i = 0; i < CHECKSUMMED_SIZE; i++) {
-        #if HAS_EEPROM
-            char byte = EEPROM.read(eeprom_addr(i));
-        #elif MCU_VARIANT == MCU_NRF52
-            char byte = eeprom_read(eeprom_addr(i));
-        #endif
+        char byte = EEPROM.read(eeprom_addr(i));
 		data[i] = byte;
 	}
+    #elif MCU_VARIANT == MCU_NRF52
+    eeprom_read_block(eeprom_addr(0), (uint8_t*)data, CHECKSUMMED_SIZE);
+    #endif
 	
 	unsigned char *hash = MD5::make_hash(data, CHECKSUMMED_SIZE);
 	bool checksum_valid = true;
