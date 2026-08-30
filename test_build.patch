@@ -1,0 +1,28 @@
+--- RNode_Firmware.ino
++++ RNode_Firmware.ino
+@@ -1938,10 +1938,6 @@
+       uint8_t F_WDR = WDRF;
+   #elif MCU_VARIANT == MCU_ESP32
+-      // TODO: Get ESP32 boot flags
+-      uint8_t boot_flags = 0x02;
+-      uint8_t F_POR = 0x00;
+-      uint8_t F_BOR = 0x00;
+-      uint8_t F_WDR = 0x01;
+   #elif MCU_VARIANT == MCU_NRF52
+       // TODO: Get NRF52 boot flags
+@@ -1963,2 +1959,10 @@
+
++#if MCU_VARIANT == MCU_ESP32
++  esp_reset_reason_t reason = esp_reset_reason();
++  if (reason == ESP_RST_POWERON) {
++    boot_vector = START_FROM_POWERON;
++  } else if (reason == ESP_RST_BROWNOUT) {
++    boot_vector = START_FROM_BROWNOUT;
++  } else {
++    boot_vector = START_FROM_BOOTLOADER;
++  }
++#else
+   if (boot_flags & (1<<F_POR)) {
+@@ -1979,2 +1983,3 @@
+   }
++#endif
