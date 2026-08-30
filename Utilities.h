@@ -1557,13 +1557,15 @@ void eeprom_flush() {
 }
 #endif
 
-void eeprom_update(int mapped_addr, uint8_t byte) {
+void eeprom_update(int mapped_addr, uint8_t byte, bool commit) {
 	#if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560
 		EEPROM.update(mapped_addr, byte);
 	#elif MCU_VARIANT == MCU_ESP32
 		if (EEPROM.read(mapped_addr) != byte) {
 			EEPROM.write(mapped_addr, byte);
-			EEPROM.commit();
+			if (commit) {
+				EEPROM.commit();
+			}
 		}
     #elif !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
         // todo: clean up this implementation, writing one byte and syncing
@@ -1608,8 +1610,11 @@ void eeprom_erase() {
 		InternalFS.format();
 	#else
 		for (int addr = 0; addr < EEPROM_RESERVED; addr++) {
-			eeprom_update(eeprom_addr(addr), 0xFF);
+			eeprom_update(eeprom_addr(addr), 0xFF, false);
 		}
+		#if MCU_VARIANT == MCU_ESP32
+			EEPROM.commit();
+		#endif
 	#endif
 	#ifdef HAS_RNS
 		reticulum.clear_caches();
@@ -1847,21 +1852,26 @@ void eeprom_conf_load() {
 
 void eeprom_conf_save() {
 	if (hw_ready && radio_online) {
-		eeprom_update(eeprom_addr(ADDR_CONF_SF), lora_sf);
-		eeprom_update(eeprom_addr(ADDR_CONF_CR), lora_cr);
-		eeprom_update(eeprom_addr(ADDR_CONF_TXP), lora_txp);
+		eeprom_update(eeprom_addr(ADDR_CONF_SF), lora_sf, false);
+		eeprom_update(eeprom_addr(ADDR_CONF_CR), lora_cr, false);
+		eeprom_update(eeprom_addr(ADDR_CONF_TXP), lora_txp, false);
 
-		eeprom_update(eeprom_addr(ADDR_CONF_BW)+0x00, lora_bw>>24);
-		eeprom_update(eeprom_addr(ADDR_CONF_BW)+0x01, lora_bw>>16);
-		eeprom_update(eeprom_addr(ADDR_CONF_BW)+0x02, lora_bw>>8);
-		eeprom_update(eeprom_addr(ADDR_CONF_BW)+0x03, lora_bw);
+		eeprom_update(eeprom_addr(ADDR_CONF_BW)+0x00, lora_bw>>24, false);
+		eeprom_update(eeprom_addr(ADDR_CONF_BW)+0x01, lora_bw>>16, false);
+		eeprom_update(eeprom_addr(ADDR_CONF_BW)+0x02, lora_bw>>8, false);
+		eeprom_update(eeprom_addr(ADDR_CONF_BW)+0x03, lora_bw, false);
 
-		eeprom_update(eeprom_addr(ADDR_CONF_FREQ)+0x00, lora_freq>>24);
-		eeprom_update(eeprom_addr(ADDR_CONF_FREQ)+0x01, lora_freq>>16);
-		eeprom_update(eeprom_addr(ADDR_CONF_FREQ)+0x02, lora_freq>>8);
-		eeprom_update(eeprom_addr(ADDR_CONF_FREQ)+0x03, lora_freq);
+		eeprom_update(eeprom_addr(ADDR_CONF_FREQ)+0x00, lora_freq>>24, false);
+		eeprom_update(eeprom_addr(ADDR_CONF_FREQ)+0x01, lora_freq>>16, false);
+		eeprom_update(eeprom_addr(ADDR_CONF_FREQ)+0x02, lora_freq>>8, false);
+		eeprom_update(eeprom_addr(ADDR_CONF_FREQ)+0x03, lora_freq, false);
 
-		eeprom_update(eeprom_addr(ADDR_CONF_OK), CONF_OK_BYTE);
+		eeprom_update(eeprom_addr(ADDR_CONF_OK), CONF_OK_BYTE, false);
+
+		#if MCU_VARIANT == MCU_ESP32
+			EEPROM.commit();
+		#endif
+
 		led_indicate_info(10);
 	} else {
 		led_indicate_warning(10);

@@ -43,7 +43,7 @@
 #endif
 
 // Forward declaration from Utilities.h
-void eeprom_update(int mapped_addr, uint8_t byte);
+void eeprom_update(int mapped_addr, uint8_t byte, bool commit = true);
 uint8_t eeprom_read(uint32_t addr);
 void hard_reset(void);
 
